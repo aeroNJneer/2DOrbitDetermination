@@ -72,7 +72,7 @@ dx = zeros(4, length(t)); % Perturbation state vector
 % xdotnom = ;
 % ydotnom = ;
 
-
+%%% THESE ARE NOT RIGHT - MUST BE TIME VARYING...%%%
 % Define nominal state and control input over time
 xnom = [r0*ones(1, length(t)); % x value (km)
     zeros(1, length(t)); % x velocity (km/s)
