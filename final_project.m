@@ -11,19 +11,18 @@ y0 = 0;
 r0 = sqrt(x0^2+y0^2);
 x0dot = 0;
 y0dot = r0 * sqrt(mu/r0^3);
-period = 2 * pi * sqrt(r0^3/mu); % orbital period
-omega = 2 * pi / period; % angular velocity of satellite
-Atilde = [0 1 0 0 ; 2*mu/r0^3 0 0 0 ; 0 0 0 1; 0 0 -mu/r0^3 0];
+%period = 2 * pi * sqrt(r0^3/mu); % orbital period
+omega = sqrt(mu/r0^3); % angular velocity of satellite
+% Atilde is time varying so need to create paramaterized variable.... 
+% -- pass in r and t (r0 for nominal)
+% Atilde = [0 1 0 0; 
+%     mu*(2*(cos(omega*t))^2-(sin(omega*t))^2)/r^3 0 3*mu*sin(omega*t)*cos(omega*t)/r^3 0;
+%     0 0 0 1;
+%     3*mu*sin(omega*t)*cos(omega*t)/r^3 0 mu*(2*(sin(omega*t)^2 -(cos(omega*t))^2))/r^3 0];
+A0 = [0 1 0 0 ; 2*mu/r0^3 0 0 0 ; 0 0 0 1; 0 0 -mu/r0^3 0];
 B = [0 0; 1 0; 0 0; 0 1];
-F = eye(4) + Atilde*dt;
+F = eye(4) + Atilde*dt; % pass in r and t to Atilde... 
 G = dt * B; 
-
-% Ftilde = expm(Atilde*dt); 
-% F = Ftilde(1:4,1:4); % linearized F matrix
-% G = Ftilde(1:4,5:6); % linearized G matrix
-
-% observability and stability
-stable = isstable(ss(F,G,zeros(1,4), zeros(1,2)));
 
 % Define nonlinear model as anonymous function
 pert = [0, 0.075, 0, -0.021]'; % perturbation 
@@ -63,27 +62,21 @@ xlabel('Time t (s)');
 grid on;
 % end of NL simulation
 
-% linearized nominal simulation
-%t = 0:10:140000;
-dx = zeros(4, length(t)); % Perturbation state vector
-% theta = omega * t;
-% xnom = r0*cos(theta(t));
-% ynom = r0*sin(theta(t));
-% xdotnom = ;
-% ydotnom = ;
-
-%%% THESE ARE NOT RIGHT - MUST BE TIME VARYING...%%%
+% % linearized nominal simulation
 % Define nominal state and control input over time
-xnom = [r0*ones(1, length(t)); % x value (km)
-    zeros(1, length(t)); % x velocity (km/s)
-    zeros(1, length(t)); % y value (rad)
-    y0dot*ones(1, length(t))]; % y velocity (rad/s)
+dx = zeros(4, length(t)); % Perturbation state vector
+theta = omega * t;
+xnom = r0*cos(omega * t);
+ynom = r0*sin(omega * t);
+xdotnom = -r0 * omega * sin(omega * t);
+ydotnom = r0 * omega * cos(omega * t);
+
 u = zeros(2, length(t));
 % Initialize perturbation state
 dx(:, 1) = [0, 0.075, 0, -0.021]';
 % Compute perturbation states over time
 for i = 2:length(t)
-    dx(:, i) = F*dx(:, i - 1) + G*u(:, i);
+    dx(:, i) = F*dx(:, i - 1) + G*u(:, i); % need to pass in r and t to Atilde...
 end
 
 % Compute total states over time
