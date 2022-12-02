@@ -63,6 +63,7 @@ grid on;
 
 % % linearized nominal simulation
 % Define empty perturbation state and measurement vectors as well as zero control input
+x = zeros(4, length(t));
 dx = zeros(4, length(t));
 u = zeros(2, length(t));
 
@@ -70,22 +71,32 @@ u = zeros(2, length(t));
 theta = omega * t;
 nomState = [r0*cos(theta); -r0*omega*sin(theta); r0*sin(theta); r0*omega*cos(theta)];
 
-% Initialize perturbation state
+% Initialize perturbation and total state
 dx(:, 1) = [0, 0.075, 0, -0.021]';
+x(:, 1) = nomState(:,1) + dx(:,1);
 
 for i = 2:length(t)
     % Compute perturbation states
     F = eye(4) + getAtilde(nomState(:, i))*dt;
     dx(:, i) = F*dx(:, i-1) + G*u(:, i-1);
 
+    % Compute total states
+    x(:, i) = nomState(:, i) + dx(:,i);
+
     % Compute measurement perturbations for all stations
+    curStepMeas = {};
     for j = 1:12
-        stationPos = getStationPos(t, j);
+        stationState = getStationState(t, j);
+
+        % Check to see if satellite is visible to station
+        satElevation = atan((x(3, i)-stationState(3))/(x(1, i)-stationState(1)));
+        stationTheta = atan(stationState(3)/stationState(1));
+        if satElevation>=-pi/2+stationTheta && satElevation<=pi/2+stationTheta
+            % Compute a measurement for station j at time t
+            
+        end
     end
 end
-
-% Compute total states over time
-x = nomState + dx;
 
 % Plot
 figure;
