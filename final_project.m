@@ -20,8 +20,7 @@ omega = sqrt(mu/r0^3); % angular velocity of satellite
 %     0 0 0 1;
 %     3*mu*sin(omega*t)*cos(omega*t)/r^3 0 mu*(2*(sin(omega*t)^2 -(cos(omega*t))^2))/r^3 0];
 A0 = [0 1 0 0 ; 2*mu/r0^3 0 0 0 ; 0 0 0 1; 0 0 -mu/r0^3 0];
-B = [0 0; 1 0; 0 0; 0 1];
-F = eye(4) + Atilde*dt; % pass in r and t to Atilde... 
+B = [0 0; 1 0; 0 0; 0 1]; 
 G = dt * B; 
 
 % Define nonlinear model as anonymous function
@@ -45,63 +44,90 @@ figure;
 subplot(4, 1, 1);
 plot(t, xnl(1, :));
 title('Total States vs. Time, Nonlinear Dynanmics - ODE45');
-ylabel('x (km)');
+ylabel('X (km)');
 grid on;
 subplot(4, 1, 2);
 plot(t, xnl(2, :));
-ylabel('\deltax (km/s)');
+ylabel('Xdot (km/s)');
 grid on;
 subplot(4, 1, 3);
 plot(t, xnl(3, :));
-ylabel('y (km)');
+ylabel('Y (km)');
 grid on;
 subplot(4, 1, 4);
 plot(t, xnl(4, :));
-ylabel('\deltay (km/s)');
+ylabel('Ydot (km/s)');
 xlabel('Time t (s)');
 grid on;
 % end of NL simulation
 
 % % linearized nominal simulation
-% Define nominal state and control input over time
-dx = zeros(4, length(t)); % Perturbation state vector
-theta = omega * t;
-xnom = r0*cos(omega * t);
-ynom = r0*sin(omega * t);
-xdotnom = -r0 * omega * sin(omega * t);
-ydotnom = r0 * omega * cos(omega * t);
-
+% Define empty perturbation state and measurement vectors as well as zero control input
+dx = zeros(4, length(t));
 u = zeros(2, length(t));
+
+% Compute nominal state as a function of true anomaly
+theta = omega * t;
+nomState = [r0*cos(theta); -r0*omega*sin(theta); r0*sin(theta); r0*omega*cos(theta)];
+
 % Initialize perturbation state
 dx(:, 1) = [0, 0.075, 0, -0.021]';
-% Compute perturbation states over time
+
 for i = 2:length(t)
-    dx(:, i) = F*dx(:, i - 1) + G*u(:, i); % need to pass in r and t to Atilde...
+    % Compute perturbation states
+    F = eye(4) + getAtilde(nomState(:, i))*dt;
+    dx(:, i) = F*dx(:, i-1) + G*u(:, i-1);
+
+    % Compute measurement perturbations for all stations
+    for j = 1:12
+        stationPos = getStationPos(t, j);
+    end
 end
 
 % Compute total states over time
-x = xnom + dx;
+x = nomState + dx;
 
 % Plot
 figure;
 subplot(4, 1, 1);
 plot(t, x(1, :));
 title('Total States vs. Time, Linearized DT SS Model');
-ylabel('x (km)'); ylim([-7000, 7000])
+ylabel('X (km)'); ylim([-10000, 10000])
 grid on;
 subplot(4, 1, 2);
 plot(t, x(2, :));
-ylabel('\deltax (km/s)');
+ylabel('Xdot (km/s)'); ylim([-10, 10])
 grid on;
 subplot(4, 1, 3);
 plot(t, x(3, :));
-ylabel('y (km)');
+ylabel('Y (km)'); ylim([-10000, 10000])
 grid on;
 subplot(4, 1, 4);
 plot(t, x(4, :));
-ylabel('\deltay (km/s)');
+ylabel('Ydot (km/s)'); ylim([-10, 10])
 xlabel('Time t (s)');
 grid on;
+
+figure;
+subplot(4,1,1);
+plot(t,dx(1,:));
+title('Approx Perturbations vs. Time, Linearized DT SS Model');
+ylabel('\deltaX (km)'); ylim([-500, 500])
+grid on
+subplot(4,1,2);
+plot(t,dx(2,:));
+ylabel('\deltaXdot (km/s)'); ylim([-1, 1])
+grid on
+subplot(4,1,3);
+plot(t,dx(3,:));
+ylabel('\deltaY (km)'); ylim([-1000, 1000])
+grid on
+subplot(4,1,4);
+plot(t,dx(4,:));
+ylabel('\deltaYdot (km/s)'); ylim([-1, 1])
+xlabel('Time t (s)');
+grid on
+
 
 figure;
 subplot(4, 1, 1);
