@@ -1,11 +1,11 @@
 function Htilde = getHtilde(xNom, stationState)
     % Compute relative range
-    rho = ((xNom(1)-stationState(1))^2 + (xNom(3)+stationState(3))^2)^0.5;
+    rho = ((xNom(1)-stationState(1))^2 + (xNom(3)-stationState(3))^2)^0.5;
 
     % Compute elements of Htilde
     H11 = (xNom(1)-stationState(1))/((xNom(1)-stationState(1))^2 + (xNom(3)-stationState(3))^2)^0.5;
     H12 = 0;
-    H13 = (xNom(3)-stationState(3))/((xNom(2)-stationState(1))^2 + (xNom(3)-stationState(3))^2)^0.5;
+    H13 = (xNom(3)-stationState(3))/((xNom(1)-stationState(1))^2 + (xNom(3)-stationState(3))^2)^0.5;
     H14 = 0;
     H21 = (xNom(2)-stationState(2))/rho - (xNom(1)-stationState(1))*((xNom(1)-stationState(1))*(xNom(2)-stationState(2))+(xNom(3)-stationState(3))*xNom(4)-stationState(4))/rho^3;
     H22 = (xNom(1)-stationState(1))/rho;
@@ -13,7 +13,7 @@ function Htilde = getHtilde(xNom, stationState)
     H24 = (xNom(3)-stationState(3))/rho;
     H31 = (stationState(3)-xNom(3))/rho^2;
     H32 = 0;
-    H33 = (xNom(1)-stationState(3))/rho^2;
+    H33 = (xNom(1)-stationState(1))/rho^2;
     H34 = 0;
 
     % Output

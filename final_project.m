@@ -61,20 +61,28 @@ xlabel('Time t (s)');
 grid on;
 % end of NL simulation
 
-% % linearized nominal simulation
+%% Approximate linearized simulation
 % Define empty perturbation state and measurement vectors as well as zero control input
 x = zeros(4, length(t));
 dx = zeros(4, length(t));
 u = zeros(2, length(t));
 
-% Compute nominal state as a function of true anomaly
-theta = omega * t;
-nomState = [r0*cos(theta); -r0*omega*sin(theta); r0*sin(theta); r0*omega*cos(theta)];
+% Compute nominal trajectory as a function of true anomaly
+trueAnom = omega * t;
+nomState = [r0*cos(trueAnom); -r0*omega*sin(trueAnom); r0*sin(trueAnom); r0*omega*cos(trueAnom)];
 
 % Initialize perturbation and total state
 dx(:, 1) = [0, 0.075, 0, -0.021]';
 x(:, 1) = nomState(:,1) + dx(:,1);
 
+% Initialize array of tracking data maps and specify which stations I want to use
+stationNums = 1:12;
+trackingData = {};
+for i = 1:length(stationNums)
+    trackingData = [trackingData; {containers.Map('KeyType', 'double','ValueType', 'any')}];
+end
+
+% Run simulation
 for i = 2:length(t)
     % Compute perturbation states
     F = eye(4) + getAtilde(nomState(:, i))*dt;
@@ -83,81 +91,39 @@ for i = 2:length(t)
     % Compute total states
     x(:, i) = nomState(:, i) + dx(:,i);
 
-    % Compute measurement perturbations for all stations
-    curStepMeas = {};
-    for j = 1:12
-        stationState = getStationState(t, j);
+    % Compute measurement perturbations for each station
+    for j = 1:length(stationNums)
+        % Identify the current station's state vector
+        stationID = stationNums(j);
+        stationState = getStationState(t(i), stationID);
+
+        % Compute satellite elevation angle and station angle
+        satElevation = atan2(x(3, i)-stationState(3), x(1, i)-stationState(1));
+        stationTheta = atan2(stationState(3), stationState(1));
+
+        % Compute angle between satellite and tracking station
+        angleDiff = satElevation - stationTheta;
+        angleDiff = abs(mod((angleDiff + pi), 2*pi) - pi);
 
         % Check to see if satellite is visible to station
-        satElevation = atan((x(3, i)-stationState(3))/(x(1, i)-stationState(1)));
-        stationTheta = atan(stationState(3)/stationState(1));
-        if satElevation>=-pi/2+stationTheta && satElevation<=pi/2+stationTheta
-            % Compute a measurement for station j at time t
+        if angleDiff < pi/2
+            % Compute nominal measurement
+            rho = sqrt((nomState(1,i)-stationState(1))^2 + (nomState(3,i)-stationState(3))^2);
+            nomMeas = [rho;...
+                ((nomState(1,i)-stationState(1))*(nomState(2,i)-stationState(2)) + (nomState(3,i)-stationState(3))*(nomState(4,i)-stationState(4)))/rho;...
+                satElevation];
+
+            % Compute a measurement for station j at time t(i)
+            Htilde = getHtilde(nomState(:, i), stationState);
+            dy = Htilde*dx(:, i);
             
+            % Query station map, add tracking data, and return to map array
+            stationData = trackingData{find(stationNums==stationID)};
+            stationData(t(i)) = [nomMeas+dy Htilde];
+            trackingData{find(stationNums==stationID)} = stationData;
         end
     end
 end
 
 % Plot
-figure;
-subplot(4, 1, 1);
-plot(t, x(1, :));
-title('Total States vs. Time, Linearized DT SS Model');
-ylabel('X (km)'); ylim([-10000, 10000])
-grid on;
-subplot(4, 1, 2);
-plot(t, x(2, :));
-ylabel('Xdot (km/s)'); ylim([-10, 10])
-grid on;
-subplot(4, 1, 3);
-plot(t, x(3, :));
-ylabel('Y (km)'); ylim([-10000, 10000])
-grid on;
-subplot(4, 1, 4);
-plot(t, x(4, :));
-ylabel('Ydot (km/s)'); ylim([-10, 10])
-xlabel('Time t (s)');
-grid on;
-
-figure;
-subplot(4,1,1);
-plot(t,dx(1,:));
-title('Approx Perturbations vs. Time, Linearized DT SS Model');
-ylabel('\deltaX (km)'); ylim([-500, 500])
-grid on
-subplot(4,1,2);
-plot(t,dx(2,:));
-ylabel('\deltaXdot (km/s)'); ylim([-1, 1])
-grid on
-subplot(4,1,3);
-plot(t,dx(3,:));
-ylabel('\deltaY (km)'); ylim([-1000, 1000])
-grid on
-subplot(4,1,4);
-plot(t,dx(4,:));
-ylabel('\deltaYdot (km/s)'); ylim([-1, 1])
-xlabel('Time t (s)');
-grid on
-
-
-figure;
-subplot(4, 1, 1);
-plot(t, x(1, :) - xnl(1, 1:length(t)));
-title('State Error vs. Time, Linearized DT SS Model vs. ODE45');
-ylabel('x (km)');
-grid on;
-subplot(4, 1, 2);
-plot(t, x(2, :) - xnl(2, 1:length(t)));
-ylabel('dx (km/s)');
-grid on;
-subplot(4, 1, 3);
-plot(t, x(3, :) - xnl(3, 1:length(t)));
-ylabel('y (km)');
-grid on;
-subplot(4, 1, 4);
-plot(t, x(4, :) - xnl(4, 1:length(t)));
-ylabel('dy (km/s)');
-xlabel('Time t (s)');
-grid on
-
-
+plotLinearizedData(t,x,dx,xnl,trackingData);
