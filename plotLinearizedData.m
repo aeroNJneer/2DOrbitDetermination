@@ -1,4 +1,7 @@
-function plotLinearizedData(t, x, dx, xnl, trackingData)    
+function plotLinearizedData(t, x, dx, xnl, trackingData) 
+    %% Plot approximate linearized dynamics model simulation
+
+    % Total states
     figure(1);
     subplot(4, 1, 1);
     plot(t, x(1, :));
@@ -19,6 +22,7 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
     xlabel('Time t (s)');
     grid on;
     
+    % Perturbations
     figure(2);
     subplot(4,1,1);
     plot(t,dx(1,:));
@@ -39,7 +43,7 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
     xlabel('Time t (s)');
     grid on
     
-    
+    % Error against ODE45
     figure(3);
     subplot(4, 1, 1);
     plot(t, x(1, :) - xnl(1, 1:length(t)));
@@ -60,14 +64,20 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
     xlabel('Time t (s)');
     grid on
     
+    %% Approximate Linearized Model Data Simulation
     figure(4);
     for j = 1:length(trackingData)
+        % Instantiate arrays for scatter plot for time and each measurement
         time = [];
         range = [];
         rangeRate = [];
         elevation = [];
+
+        % Get tracking data for current station
         data = trackingData{j};
         for i=1:length(t)
+            % Iterate through map to get all the times where a measurement
+            % is available
             if isKey(data, t(i))
                 trackPoint = data(t(i));
                 time = [time; t(i)];
@@ -76,6 +86,8 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
                 elevation = [elevation; trackPoint(3,1)];
             end
         end
+
+        % Plot with with single color for this tracking station
         subplot(3,1,1);
         hold on
         scatter(time, range);
@@ -86,6 +98,8 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
         hold on
         scatter(time, elevation);
     end
+
+    % Add labels
     subplot(3,1,1);
     title('Approximate Linearized Model Data Simulation');
     ylabel('Range (km)');

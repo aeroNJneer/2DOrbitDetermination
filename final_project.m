@@ -111,7 +111,7 @@ for i = 2:length(t)
             rho = sqrt((nomState(1,i)-stationState(1))^2 + (nomState(3,i)-stationState(3))^2);
             nomMeas = [rho;...
                 ((nomState(1,i)-stationState(1))*(nomState(2,i)-stationState(2)) + (nomState(3,i)-stationState(3))*(nomState(4,i)-stationState(4)))/rho;...
-                satElevation];
+                atan2(nomState(3, i)-stationState(3), nomState(1, i)-stationState(1))];
 
             % Compute a measurement for station j at time t(i)
             Htilde = getHtilde(nomState(:, i), stationState);
@@ -119,6 +119,8 @@ for i = 2:length(t)
             
             % Query station map, add tracking data, and return to map array
             stationData = trackingData{find(stationNums==stationID)};
+            % Data is measurement in first column and Htilde is
+            % right-appended.
             stationData(t(i)) = [nomMeas+dy Htilde];
             trackingData{find(stationNums==stationID)} = stationData;
         end
