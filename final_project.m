@@ -85,7 +85,7 @@ end
 % Run simulation
 for i = 2:length(t)
     % Compute perturbation states
-    F = eye(4) + getAtilde(nomState(:, i))*dt;
+    F = eye(4) + getAtilde(nomState(:, i-1))*dt;
     dx(:, i) = F*dx(:, i-1) + G*u(:, i-1);
 
     % Compute total states
