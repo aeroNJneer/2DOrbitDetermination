@@ -24,7 +24,6 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
     % Constant
     mu = 398600;
     
-
     %% Compute nonlinear dynamics
     % Define nonlinear model as anonymous function and set options
     xdot = @(x, u, w) [x(2);
@@ -34,8 +33,7 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
     options = odeset('RelTol', 1e-12);
 
     % Initialize truth state vector and Cholesky decomp of Q matrix
-    %Sv = chol(Q, 'lower');
-    Sv = Q;
+    Sv = chol(Q, 'lower');
     truthX = x0;
     
     % Integrate orbit trajectory stepwise with process noise
@@ -88,9 +86,9 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
                     + Sv*randn(size(R, 1), 1);
                 
                 % Query station map, add tracking data, and return to map array
-                stationData = truthY{find(stationNums==stationID)};
+                stationData = truthY{stationNums==stationID};
                 stationData(t(i)) = outY;
-                truthY{find(stationNums==stationID)} = stationData;
+                truthY{stationNums==stationID} = stationData;
             end
         end
     end
