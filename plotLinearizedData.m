@@ -96,7 +96,7 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
         scatter(time, rangeRate);
         subplot(3,1,3);
         hold on
-        scatter(time, rad2deg(elevation));
+        scatter(time, elevation);
     end
 
     % Add labels
