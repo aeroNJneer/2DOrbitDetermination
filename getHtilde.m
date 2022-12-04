@@ -1,6 +1,6 @@
 function Htilde = getHtilde(xNom, stationState)
     % Compute relative range
-    rho = ((xNom(1)-stationState(1))^2 + (xNom(3)-stationState(3))^2)^0.5;
+    rho = sqrt((xNom(1)-stationState(1))^2 + (xNom(3)-stationState(3))^2);
 
     % Compute elements of Htilde
     H11 = (xNom(1)-stationState(1))/((xNom(1)-stationState(1))^2 + (xNom(3)-stationState(3))^2)^0.5;

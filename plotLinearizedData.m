@@ -2,7 +2,7 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
     %% Plot approximate linearized dynamics model simulation
 
     % Total states
-    figure(1);
+    figure;
     subplot(4, 1, 1);
     plot(t, x(1, :));
     title('Total States vs. Time, Linearized DT SS Model');
@@ -23,7 +23,7 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
     grid on;
     
     % Perturbations
-    figure(2);
+    figure;
     subplot(4,1,1);
     plot(t,dx(1,:));
     title('Approx Perturbations vs. Time, Linearized DT SS Model');
@@ -44,28 +44,28 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
     grid on
     
     % Error against ODE45
-    figure(3);
+    figure;
     subplot(4, 1, 1);
     plot(t, x(1, :) - xnl(1, 1:length(t)));
     title('State Error vs. Time, Linearized DT SS Model vs. ODE45');
-    ylabel('x (km)');
+    ylabel('x Error (km)');
     grid on;
     subplot(4, 1, 2);
     plot(t, x(2, :) - xnl(2, 1:length(t)));
-    ylabel('dx (km/s)');
+    ylabel('xDot Error (km/s)');
     grid on;
     subplot(4, 1, 3);
     plot(t, x(3, :) - xnl(3, 1:length(t)));
-    ylabel('y (km)');
+    ylabel('y Error (km)');
     grid on;
     subplot(4, 1, 4);
     plot(t, x(4, :) - xnl(4, 1:length(t)));
-    ylabel('dy (km/s)');
+    ylabel('yDot Error (km/s)');
     xlabel('Time t (s)');
     grid on
     
     %% Approximate Linearized Model Data Simulation
-    figure(4);
+    figure;
     for j = 1:length(trackingData)
         % Instantiate arrays for scatter plot for time and each measurement
         time = [];
@@ -96,7 +96,7 @@ function plotLinearizedData(t, x, dx, xnl, trackingData)
         scatter(time, rangeRate);
         subplot(3,1,3);
         hold on
-        scatter(time, elevation);
+        scatter(time, rad2deg(elevation));
     end
 
     % Add labels

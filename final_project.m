@@ -97,8 +97,9 @@ for i = 2:length(t)
         stationID = stationNums(j);
         stationState = getStationState(t(i), stationID);
 
-        % Compute satellite elevation angle and station angle
-        satElevation = atan2(x(3, i)-stationState(3), x(1, i)-stationState(1));
+        % Compute satellite elevation angle and station angle using truth
+        % (ODE45) data when satellite actually becomes visible
+        satElevation = atan2(xnl(3, i)-stationState(3), xnl(1, i)-stationState(1));
         stationTheta = atan2(stationState(3), stationState(1));
 
         % Compute angle between satellite and tracking station
@@ -106,7 +107,7 @@ for i = 2:length(t)
         angleDiff = abs(mod((angleDiff + pi), 2*pi) - pi);
 
         % Check to see if satellite is visible to station
-        if angleDiff < pi/2
+        if angleDiff <= pi/2
             % Compute nominal measurement
             rho = sqrt((nomState(1,i)-stationState(1))^2 + (nomState(3,i)-stationState(3))^2);
             nomMeas = [rho;...
