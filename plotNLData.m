@@ -8,7 +8,7 @@ function plotNLData(t,xnl, Q, R, trackingData)
         grid on;
     subplot(4, 1, 2);
         plot(t, xnl(2, :));
-        ylabel('Xdot (km/s)');
+        ylabel('\deltax (km/s)');
         grid on;
     subplot(4, 1, 3);
         plot(t, xnl(3, :));
@@ -16,7 +16,7 @@ function plotNLData(t,xnl, Q, R, trackingData)
         grid on;
     subplot(4, 1, 4);
         plot(t, xnl(4, :));
-        ylabel('Ydot (km/s)');
+        ylabel('\deltay (km/s)');
         xlabel('Time t (s)');
     grid on;
 % Plot measurements
