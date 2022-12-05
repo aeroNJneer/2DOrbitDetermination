@@ -241,4 +241,4 @@ for i = 1:numTrials
 end
 
 % Plot typical simulation from first sim run
-plotLKFData(t, truthTotalStates{1, :}, [estimationErrs{1, :}], [estimationErrsCov{1,:}], simulatedMeasurements(1, :));
+plotLKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
