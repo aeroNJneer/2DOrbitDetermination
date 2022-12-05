@@ -1,4 +1,4 @@
-function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
+function [X, Y] = simulateTruthModel(t, x0, Q, R, stationNums)
     % This function performs a complete nonlinear simulation of satellite
     % dynamics and tracking station measurements with process and
     % measurement noise. There is no forcing input.
@@ -12,9 +12,9 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
     % generating measurements
     %
     % Outputs:
-    % truthX = time-tagged truth satellite state vector
-    % truthY = cell array of containing time-tagged maps of truth nonlinear
-    % measurements from tracking stations
+    % X = time-tagged truth satellite state vector corresponding to input t
+    % Y = cell array of containing time-tagged maps of truth nonlinear
+    % measurements from tracking stations corresponding to input t
     %
     % truthY is a cell array containing maps for each tracking station. For
     % example, truthY[1] is the tracking data for station 1, and truthY[10]
@@ -24,7 +24,6 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
     % Constant
     mu = 398600;
     
-    %% Compute nonlinear dynamics
     % Define nonlinear model as anonymous function and set options
     xdot = @(x, u, w) [x(2);
         -mu*x(1)/sqrt((x(1)^2+x(3)^2)^3) + u(1) + w(1);
@@ -33,35 +32,45 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
     options = odeset('RelTol', 1e-12);
 
     % Initialize truth state vector and Cholesky decomp of Q matrix
-    Sv = chol(Q, 'lower');
-    truthX = x0;
+    if Q == zeros(2)
+        % No noise case
+        SvQ = Q;
+    else
+        % Noisy case
+        SvQ = chol(Q, 'lower');
+    end
+
+    % Initialize truth state vector and tracking data maps
+    X = x0;
+    Y = {};
+    for i = 1:length(stationNums)
+        Y = [Y; {containers.Map('KeyType', 'double','ValueType', 'any')}];
+    end
+
+    % Perform Cholesky decomp on R matrix
+    if R == zeros(3)
+        % No noise case
+        SvR = R;
+    else
+        % Noisy case
+        SvR = chol(R, 'lower');
+    end
     
     % Integrate orbit trajectory stepwise with process noise
-    for i = 1:length(t)-1
+    for i = 2:length(t)
         % Draw random noise
-        w = Sv * randn(size(Sv, 1), 1);
+        w = SvQ * randn(size(SvQ, 1), 1);
         
         % Define wrapper function for use in ODE45
         xdotwrap = @(t, x) xdot(x, [0; 0], w);
 
         % Compute next step using ODE45
-        [~, xout] = ode45(xdotwrap, [t(i) t(i+1)], truthX(:, end), options);
+        [~, xout] = ode45(xdotwrap, [t(i-1) t(i)], X(:, end), options);
 
-        % Store truth state output
-        truthX = [truthX xout(end, :)'];
-    end
-
-    %% Compute nonlinear measurements
-    % Initialize tracking data maps
-    truthY = {};
-    for i = 1:length(stationNums)
-        truthY = [truthY; {containers.Map('KeyType', 'double','ValueType', 'any')}];
-    end
-
-    % Perform Cholesky decomp on R matrix
-    Sv = chol(R, 'lower');
-
-    for i = 1:length(t)
+        % Store state output
+        X = [X xout(end, :)'];
+        
+        % Compute measurements
         for j = 1:length(stationNums)
             % Identify the current station's state vector
             stationID = stationNums(j);
@@ -69,7 +78,7 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
     
             % Compute satellite elevation angle and station angle to check
             % when satellite becomes visible
-            satElevation = atan2(truthX(3, i)-stationState(3), truthX(1, i)-stationState(1));
+            satElevation = atan2(X(3, i)-stationState(3), X(1, i)-stationState(1));
             stationTheta = atan2(stationState(3), stationState(1));
     
             % Compute smallest angle between satellite and tracking station
@@ -79,16 +88,12 @@ function [truthX, truthY] = simulateTruthModel(t, x0, Q, R, stationNums)
             % Check to see if satellite is visible to station
             if angleDiff <= pi/2
                 % Compute measurement with process noise
-                rho = sqrt((truthX(1,i)-stationState(1))^2 + (truthX(3,i)-stationState(3))^2);
-                outY = [rho;...
-                    ((truthX(1,i)-stationState(1))*(truthX(2,i)-stationState(2)) + (truthX(3,i)-stationState(3))*(truthX(4,i)-stationState(4)))/rho;...
-                    atan2(truthX(3, i)-stationState(3), truthX(1, i)-stationState(1))]...
-                    + Sv*randn(size(R, 1), 1);
+                outY = getNLMeasurement(t(i), X(:,i), stationID) + SvR*randn(size(SvR, 1), 1);
                 
                 % Query station map, add tracking data, and return to map array
-                stationData = truthY{stationNums==stationID};
+                stationData = Y{stationNums==stationID};
                 stationData(t(i)) = outY;
-                truthY{stationNums==stationID} = stationData;
+                Y{stationNums==stationID} = stationData;
             end
         end
     end
