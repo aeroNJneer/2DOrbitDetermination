@@ -1,29 +1,24 @@
 close all
 clear
-mu = 398600; % gr62)avitational constant
+mu = 398600; % gravitational constant
 omegaE = 2*pi/86400;  % angular velocity of earth
 rE = 6378; % radius of earth
 dt = 10;
 t = 0:dt:14000;
+stationNums = 1:12;
 % initial conditions
 x0 = 6678;
 y0 = 0;
 r0 = sqrt(x0^2+y0^2);
 x0dot = 0;
 y0dot = r0 * sqrt(mu/r0^3);
-%period = 2 * pi * sqrt(r0^3/mu); % orbital period
 omega = sqrt(mu/r0^3); % angular velocity of satellite
-% Atilde is time varying so need to create paramaterized variable.... 
-% -- pass in r and t (r0 for nominal)
-% Atilde = [0 1 0 0; 
-%     mu*(2*(cos(omega*t))^2-(sin(omega*t))^2)/r^3 0 3*mu*sin(omega*t)*cos(omega*t)/r^3 0;
-%     0 0 0 1;
-%     3*mu*sin(omega*t)*cos(omega*t)/r^3 0 mu*(2*(sin(omega*t)^2 -(cos(omega*t))^2))/r^3 0];
-A0 = [0 1 0 0 ; 2*mu/r0^3 0 0 0 ; 0 0 0 1; 0 0 -mu/r0^3 0];
+A0 = getAtilde([x0, x0dot, y0, y0dot]');
 B = [0 0; 1 0; 0 0; 0 1]; 
 G = dt * B; 
+% end initial conditions
 
-% Define nonlinear model as anonymous function
+%% Nonlinear model simulation
 pert = [0, 0.075, 0, -0.021]'; % perturbation 
 xdot = @(x, u) [x(2);
     -mu*x(1)/sqrt((x(1)^2+x(3)^2)^3) + u(1);
@@ -31,34 +26,22 @@ xdot = @(x, u) [x(2);
     -mu*x(3)/sqrt((x(1)^2+x(3)^2)^3) + u(2)];
 % Define initial total state
 X0 = [x0, x0dot, y0, y0dot]' +  pert; 
-% 
+
 % Define wrapper function for use in ODE45
 xdotwrap = @(t, x) xdot(x, [0; 0]);
 % Compute total state using ODE45
 options = odeset('RelTol', 1e-12); % Set ODE45 options
 [tout, xnl] = ode45(xdotwrap, t, X0, options);
-xnl = xnl'; % Take transpose so that dimensions match with xnom
+xnl = xnl'; % Take transpose
 
-% Plot
-figure;
-subplot(4, 1, 1);
-plot(t, xnl(1, :));
-title('Total States vs. Time, Nonlinear Dynanmics - ODE45');
-ylabel('X (km)');
-grid on;
-subplot(4, 1, 2);
-plot(t, xnl(2, :));
-ylabel('Xdot (km/s)');
-grid on;
-subplot(4, 1, 3);
-plot(t, xnl(3, :));
-ylabel('Y (km)');
-grid on;
-subplot(4, 1, 4);
-plot(t, xnl(4, :));
-ylabel('Ydot (km/s)');
-xlabel('Time t (s)');
-grid on;
+% simulate measurements
+Y = {};
+for i = 1:length(stationNums)
+    Y = [Y; {containers.Map('KeyType', 'double','ValueType', 'any')}];
+end
+
+Y = getMeasurements(Y, tout, xnl, stationNums, 0);
+plotNLData(tout, xnl, zeros(2), zeros(3), Y);
 % end of NL simulation
 
 %% Approximate linearized simulation
@@ -76,7 +59,6 @@ dx(:, 1) = [0, 0.075, 0, -0.021]';
 x(:, 1) = nomX0(:,1) + dx(:,1);
 
 % Initialize array of tracking data maps and specify which stations I want to use
-stationNums = 1:12;
 trackingData = {};
 for i = 1:length(stationNums)
     trackingData = [trackingData; {containers.Map('KeyType', 'double','ValueType', 'any')}];
@@ -242,3 +224,5 @@ end
 
 % Plot typical simulation from first sim run
 plotLKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
+
+%% EKF Simulation
