@@ -12,8 +12,9 @@ y0 = 0;
 r0 = sqrt(x0^2+y0^2);
 x0dot = 0;
 y0dot = r0 * sqrt(mu/r0^3);
+X0 = [x0, x0dot, y0, y0dot]';
 omega = sqrt(mu/r0^3); % angular velocity of satellite
-A0 = getAtilde([x0, x0dot, y0, y0dot]');
+A0 = getAtilde(X0);
 B = [0 0; 1 0; 0 0; 0 1]; 
 G = dt * B; 
 % end initial conditions
@@ -25,13 +26,9 @@ xdot = @(x, u) [x(2);
     x(4);
     -mu*x(3)/sqrt((x(1)^2+x(3)^2)^3) + u(2)];
 % Define initial total state
-X0 = [x0, x0dot, y0, y0dot]' +  pert; 
+X0 = X0 +  pert; 
 
-% Define wrapper function for use in ODE45
-xdotwrap = @(t, x) xdot(x, [0; 0]);
-% Compute total state using ODE45
-options = odeset('RelTol', 1e-12); % Set ODE45 options
-[tout, xnl] = ode45(xdotwrap, t, X0, options);
+[tout, xnl] = nlmodel(t, X0, mu, [0 0]);
 xnl = xnl'; % Take transpose
 
 % simulate measurements
@@ -40,7 +37,7 @@ for i = 1:length(stationNums)
     Y = [Y; {containers.Map('KeyType', 'double','ValueType', 'any')}];
 end
 
-Y = getMeasurements(Y, tout, xnl, stationNums, 0);
+Y = getMecloasurements(Y, tout, xnl, stationNums, 0);
 plotNLData(tout, xnl, zeros(2), zeros(3), Y);
 % end of NL simulation
 
@@ -146,7 +143,7 @@ for i = 1:numTrials
 
     % Draw intial state with perturbation and conduct truth model sim
     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
-    [nomX, ~] = simulateTruthModel(t, nomX0, zeros(2), zeros(3), stationNums);
+    [nomX, nomY] = simulateTruthModel(t, nomX0, zeros(2), zeros(3), stationNums);
     [truthX, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
     
     % Initialize this run's outputs
@@ -191,7 +188,7 @@ for i = 1:numTrials
             dxPlus = dxMinus + K * (y-yStar - HtildeStacked*dxMinus);
 
             % Compute measurement innovation covariance matrix
-            S = HtildeStacked/pMinus*HtildeStacked' + RStacked;
+            S = HtildeStacked*pMinus*HtildeStacked' + RStacked;
         else
             % No measurements available, so carry forward pMinus and state
             pPlus = pMinus;
@@ -224,5 +221,125 @@ end
 
 % Plot typical simulation from first sim run
 plotLKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
+plotSimulationData(t, nomX, truthXnom, nomY, measY, stationNums);
+%% EKF Implementation
+% Tuning inputs
+% stationNums = 1:12;
+% t = 0:dt:14000;
+numTrials = 2;
+givenData = load('orbitdeterm_finalproj_KFdata.mat');
+Qkf = givenData.Qtrue;
+pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
 
-%% EKF Simulation
+% Setup
+rand(100);
+stationNums = 1:12;
+dt = 10;
+t = 0:dt:14000;
+r0 = 6678;
+mu = 398600;
+nomX0 = [r0; 0; 0; sqrt(mu/r0)];
+gamma = [0 0; 1 0; 0 0; 0 1]; 
+omegaTilde = dt * gamma; 
+
+% Initialize outputs. Each row is a different trial
+filteredPerturbations = {};
+filteredTotalStates = {};
+truthTotalStates = {};
+simulatedMeasurements = {};
+estimationErrs = {};
+estimationErrsCov = {};
+measInnovations = {};
+measInnovationsCov = {};
+
+for i = 1:numTrials
+    disp(['Running EKF trial ' int2str(i) '...']);
+    % Initialize priors
+    xhatPlus = zeros(4,1);
+    pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
+    Sv = chol(pPlus, 'lower');
+    
+    % Draw intial state with perturbation and conduct truth model sim
+    X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
+    [tout, xhatPlus] = nlmodel([t(1) t(2)], X0, mu, [0 0]);   
+    xhatPlus = xhatPlus(end,:)';
+    [truthX, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
+    
+    % Initialize this run's outputs
+    trialPerturbations = {};
+    trialTotalStates = {};
+    trialEstimationErrs = {};
+    trialEstimationErrsCov = {};
+    trialMeasInnovations = {};
+    trialMeasInnovationsCov = {};
+
+    % Begin EKF filtering
+    for j = 2:length(t)
+        % Update step
+        Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
+    %    xhatMinus = xhatPlus;
+        pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde';
+        [~,xhatMinus] = nlmodel([t(j-1) t(j)], xhatPlus, mu, [0 0]);
+        xhatMinus = xhatMinus(end,:)';
+        % Get stacked station measurements
+        [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
+        yhat = [];
+        dy = [];
+        HtildeStacked = [];
+        RStacked = [];
+        if ~isempty(y)
+            % If there are measurements, then perform correction step by
+            % stacking nominal measurements y* per station and getting corresponding
+            % stacked Htilde and R matrices
+            for k=1:length(stationIDs)
+                % Compute a measurement for station j at time t(i)
+                yhat = [yhat; getNLMeasurement(t(j), xhatMinus, stationIDs(k))];
+                HtildeStacked = [HtildeStacked; getHtilde(xhatMinus, getStationState(t(j), stationIDs(k)))];
+                RSize = size(givenData.Rtrue, 1);   % R is square
+                RStacked = [RStacked [zeros((k-1)*RSize, RSize); givenData.Rtrue; zeros((length(stationIDs)-k)*RSize, RSize)]];
+            end
+    
+            % Compute Kalman gain
+            K = pMinus * HtildeStacked' / (HtildeStacked*pMinus*HtildeStacked' + RStacked);
+    
+            % Update estimation error covariance and compute measurement innovation 
+            pPlus = (eye(size(K, 1))-K*HtildeStacked)*pMinus;
+            dy = y-yhat;
+            xhatPlus = xhatMinus + (K * dy);
+
+            % Compute measurement innovation covariance matrix
+            S = HtildeStacked*pMinus*HtildeStacked' + RStacked;
+        else
+            % No measurements available, so carry forward pMinus and state
+            pPlus = pMinus;
+          %  [~,xhatPlus] = nlmodel([t(j-1) t(j)], xhatMinus, mu, [0 0]);
+           % xhatPlus = xhatPlus(end,:)';
+            xhatPlus = xhatMinus;
+            % dy and S are null
+         %   dy = [nan; nan; nan];
+            dy = measY - yhat;
+            S = [nan nan nan; nan nan nan; nan nan nan];
+        end
+        
+        % Store outputs
+        trialTotalStates = [trialTotalStates xhatPlus];
+        trialEstimationErrs = [trialEstimationErrs truthX(:, j)-xhatPlus];
+        trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
+        trialMeasInnovations = [trialMeasInnovations dy];
+        trialMeasInnovationsCov = [trialMeasInnovationsCov S];
+    end
+
+    % Store trial output
+    filteredPerturbations = [filteredPerturbations; trialPerturbations];
+    filteredTotalStates = [filteredTotalStates; trialTotalStates];
+    truthTotalStates = [truthTotalStates; truthX];
+    simulatedMeasurements = [simulatedMeasurements; measY'];
+    estimationErrs = [estimationErrs; trialEstimationErrs];
+    estimationErrsCov = [estimationErrsCov; trialEstimationErrsCov];
+    measInnovations = [measInnovations; trialMeasInnovations];
+    measInnovationsCov = [measInnovationsCov; trialMeasInnovationsCov];
+end
+
+% Plot typical simulation from first sim run
+plotEKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
+

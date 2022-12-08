@@ -10,6 +10,7 @@ function [X, Y] = simulateTruthModel(t, x0, Q, R, stationNums)
     % R = measurement noise covariance matrix
     % stationNums = matrix containing the IDs of the stations that are
     % generating measurements
+    %+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
     %
     % Outputs:
     % X = time-tagged truth satellite state vector corresponding to input t
