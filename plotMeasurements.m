@@ -39,7 +39,7 @@ function plotMeasurements(t, trackingData, title)
     subplot(3,1,1);
         ylabel('\rho Range (km)');
     subplot(3,1,2);
-        ylabel('\delta\rho Range Rate (km/s)');
+        ylabel('\rhodot Range Rate (km/s)');
     subplot(3,1,3);
         ylabel('\phi Elevation (rad)');
         xlabel('Time t (s)');

@@ -24,7 +24,7 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
     plot(t(2:end), estErr(2,:), 'b');
     plot(t(2:end), threeSigma2, '--b');
     plot(t(2:end), -threeSigma2, '--b');
-    ylabel('\deltaX Est. Error [km/s]');
+    ylabel('Xdot Est. Error [km/s]');
     hold off;
 
     threeSigma3 = [];
@@ -48,7 +48,7 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
     plot(t(2:end), estErr(4,:), 'b');
     plot(t(2:end), threeSigma4, '--b');
     plot(t(2:end), -threeSigma4, '--b');
-    ylabel('\deltaY Est. Error [km/s]');
+    ylabel('Ydot Est. Error [km/s]');
     xlabel('Time t (s)');
     hold off;
 

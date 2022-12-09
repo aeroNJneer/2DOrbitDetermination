@@ -7,7 +7,7 @@ function plotStates(t, x, title)
         grid on;
     subplot(4, 1, 2);
         plot(t, x(2, :));
-        ylabel('\deltaX (km/s)');
+        ylabel('Xdot (km/s)');
         grid on;
     subplot(4, 1, 3);
         plot(t, x(3, :));
@@ -15,7 +15,7 @@ function plotStates(t, x, title)
         grid on;
     subplot(4, 1, 4);
         plot(t, x(4, :));
-        ylabel('\deltaY (km/s)');
+        ylabel('Ydot (km/s)');
         xlabel('Time t (s)');
     grid on;
 end

@@ -295,8 +295,8 @@ for i = 1:numTrials
         % Update step
         Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
         pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde';
-        xhatMinus = Ftilde * xhatPlus;
-
+        [xhatMinus, ~] = simulateTruthModel([t(j-1) t(j)], xhatPlus, zeros(2), zeros(3), stationNums);
+        xhatMinus = xhatMinus(:,end);
         % Get stacked station measurements
         [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
         dy = [];
@@ -355,7 +355,7 @@ end
 
 % Plot typical simulation from first sim run
 plotStates(t, xnoisy , "Noisy Truth States vs. Time, Typical EKF Run");
-%plotStates(t, trialTotalStates{1, :} , "Noisy Truth States vs. Time, Typical EKF Run");
+% plotStates(t, trialTotalStates{1, :} , "Noisy Truth States vs. Time, Typical EKF Run");
 plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), "State Estimation Errors vs. Time, Typical EKF Run" );
 
 
