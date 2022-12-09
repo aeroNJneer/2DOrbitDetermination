@@ -240,7 +240,7 @@ close all
 rng(100);
 numTrials = 2;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
-Qkf = givenData.Qtrue
+Qkf = givenData.Qtrue;
 diagonals = [1e-10 1e-10];
 offdiags = [2e-6 2e-6];
 %Qkf = [diagonals(1) offdiags(1); offdiags(2) diagonals(2)];
