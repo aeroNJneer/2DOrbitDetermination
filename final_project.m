@@ -13,32 +13,26 @@ r0 = sqrt(x0^2+y0^2);
 x0dot = 0;
 y0dot = r0 * sqrt(mu/r0^3);
 X0 = [x0, x0dot, y0, y0dot]';
-omega = sqrt(mu/r0^3); % angular velocity of satellite
+omega = sqrt(mu/r0^3);          % angular velocity of satellite
 A0 = getAtilde(X0);
 B = [0 0; 1 0; 0 0; 0 1]; 
 G = dt * B; 
 % end initial conditions
 
 %% Nonlinear model simulation
-pert = [0, 0.075, 0, -0.021]'; % perturbation 
-xdot = @(x, u) [x(2);
-    -mu*x(1)/sqrt((x(1)^2+x(3)^2)^3) + u(1);
-    x(4);
-    -mu*x(3)/sqrt((x(1)^2+x(3)^2)^3) + u(2)];
-% Define initial total state
-X0 = X0 +  pert; 
-
+pert = [0, 0.075, 0, -0.021]';  % perturbation 
+X0 = X0 +  pert;                % Define initial total state
 [tout, xnl] = nlmodel(t, X0, mu, [0 0]);
-xnl = xnl'; % Take transpose
-
+xnl = xnl';                     % Take transpose
 % simulate measurements
 Y = {};
 for i = 1:length(stationNums)
     Y = [Y; {containers.Map('KeyType', 'double','ValueType', 'any')}];
 end
 
-Y = getMecloasurements(Y, tout, xnl, stationNums, 0);
-plotNLData(tout, xnl, zeros(2), zeros(3), Y);
+Y = getMeasurements(Y, tout, xnl, stationNums, 0);
+plotStates(tout, xnl, "Total States vs. Time, Nonlinear Dynanmics - ODE45");
+plotMeasurements(tout, Y, "Nonlinear Model Data Simulation");
 % end of NL simulation
 
 %% Approximate linearized simulation
@@ -105,8 +99,11 @@ for i = 2:length(t)
 end
 
 % Plot
-plotLinearizedData(t,x,dx,xnl,trackingData);
-
+% plotLinearizedData(t,x,dx,xnl,trackingData);
+plotStates(t,x, "Total States vs. Time, Linearized DT SS Model");
+plotStates(t,dx, "Approx Perturbations vs. Time, Linearized DT SS Model");
+plotStates(t,x-xnl, "State Error vs. Time, Linearized DT SS Model vs. ODE45");
+plotMeasurements(t,trackingData, "Approximate Linearized Model Data Simulation");
 %% LKF Implementation
 % Tuning inputs
 numTrials = 1;
@@ -219,13 +216,27 @@ for i = 1:numTrials
     measInnovationsCov = [measInnovationsCov; trialMeasInnovationsCov];
 end
 
+% Plot Monte Carlo simulated states and measurements
+plotStates(t, nomX, "Truth States vs. Time, Monte Carlo Run");
+plotStates(t, truthX, "Noisy Truth States vs. Time, Monte Carlo Run");
+plotMeasurements(t, measY, "Noisy Simulated Measurements, Monte Carlo Run")
+%plotSimulationData(t, nomX, truthXnom, nomY, measY, stationNums);
+
 % Plot typical simulation from first sim run
-plotLKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
-plotSimulationData(t, nomX, truthXnom, nomY, measY, stationNums);
+plotStates(t, truthTotalStates{1, :}, "Noisy Truth States vs. Time, Typical LKF Run");
+%plotStates(t, filteredTotalStates{1, :}, "Noisy Simulated States vs. Time, Typical LKF Run");
+
+plotMeasurements(t, simulatedMeasurements(1, :), "Noisy Simulated Measurements, Typical LKF Run");
+plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)) , "State Estimation Errors vs. Time, Typical LKF Run")
+%plotLKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
+
+
 %% EKF Implementation
 % Tuning inputs
 % stationNums = 1:12;
 % t = 0:dt:14000;
+clear
+close all
 numTrials = 2;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = givenData.Qtrue;
@@ -238,7 +249,7 @@ dt = 10;
 t = 0:dt:14000;
 r0 = 6678;
 mu = 398600;
-nomX0 = [r0; 0; 0; sqrt(mu/r0)];
+nomX0 = [r0; 0; 0; sqrt(mu/r0)];    % initial conditions w/no noise
 gamma = [0 0; 1 0; 0 0; 0 1]; 
 omegaTilde = dt * gamma; 
 
@@ -254,17 +265,23 @@ measInnovationsCov = {};
 
 for i = 1:numTrials
     disp(['Running EKF trial ' int2str(i) '...']);
-    % Initialize priors
+    % step 1: Initialize priors
     xhatPlus = zeros(4,1);
     pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
     Sv = chol(pPlus, 'lower');
     
     % Draw intial state with perturbation and conduct truth model sim
     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
-    [tout, xhatPlus] = nlmodel([t(1) t(2)], X0, mu, [0 0]);   
-    xhatPlus = xhatPlus(end,:)';
-    [truthX, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
+
+    % simulate with no noise
+    [xnominal, ~] = simulateTruthModel(t, nomX0, zeros(2), zeros(3), stationNums);
+    % Monte Carlo simulation for measurements
+    [xnoisy, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
+   
+    % compute xhatPlus with no noise at nominal point
+    [xhatPlus, ~] = simulateTruthModel([t(1) t(2)], nomX0, zeros(2), zeros(3), stationNums);
     
+    xhatPlus = xhatPlus(:,end);
     % Initialize this run's outputs
     trialPerturbations = {};
     trialTotalStates = {};
@@ -277,14 +294,13 @@ for i = 1:numTrials
     for j = 2:length(t)
         % Update step
         Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
-    %    xhatMinus = xhatPlus;
         pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde';
-        [~,xhatMinus] = nlmodel([t(j-1) t(j)], xhatPlus, mu, [0 0]);
-        xhatMinus = xhatMinus(end,:)';
+        xhatMinus = Ftilde * xhatPlus;
+
         % Get stacked station measurements
         [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
-        yhat = [];
         dy = [];
+        yhat = [];
         HtildeStacked = [];
         RStacked = [];
         if ~isempty(y)
@@ -298,32 +314,29 @@ for i = 1:numTrials
                 RSize = size(givenData.Rtrue, 1);   % R is square
                 RStacked = [RStacked [zeros((k-1)*RSize, RSize); givenData.Rtrue; zeros((length(stationIDs)-k)*RSize, RSize)]];
             end
-    
+
             % Compute Kalman gain
             K = pMinus * HtildeStacked' / (HtildeStacked*pMinus*HtildeStacked' + RStacked);
     
             % Update estimation error covariance and compute measurement innovation 
             pPlus = (eye(size(K, 1))-K*HtildeStacked)*pMinus;
             dy = y-yhat;
-            xhatPlus = xhatMinus + (K * dy);
+            xhatPlus = xhatMinus + (K * y);
 
             % Compute measurement innovation covariance matrix
             S = HtildeStacked*pMinus*HtildeStacked' + RStacked;
         else
             % No measurements available, so carry forward pMinus and state
             pPlus = pMinus;
-          %  [~,xhatPlus] = nlmodel([t(j-1) t(j)], xhatMinus, mu, [0 0]);
-           % xhatPlus = xhatPlus(end,:)';
             xhatPlus = xhatMinus;
             % dy and S are null
-         %   dy = [nan; nan; nan];
-            dy = measY - yhat;
+            dy = [nan; nan; nan];
             S = [nan nan nan; nan nan nan; nan nan nan];
         end
         
         % Store outputs
         trialTotalStates = [trialTotalStates xhatPlus];
-        trialEstimationErrs = [trialEstimationErrs truthX(:, j)-xhatPlus];
+        trialEstimationErrs = [trialEstimationErrs xnominal(:, j)-xhatPlus];
         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
         trialMeasInnovations = [trialMeasInnovations dy];
         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
@@ -332,8 +345,8 @@ for i = 1:numTrials
     % Store trial output
     filteredPerturbations = [filteredPerturbations; trialPerturbations];
     filteredTotalStates = [filteredTotalStates; trialTotalStates];
-    truthTotalStates = [truthTotalStates; truthX];
-    simulatedMeasurements = [simulatedMeasurements; measY'];
+    truthTotalStates = [truthTotalStates; xnominal];
+    simulatedMeasurements = [simulatedMeasurements; yhat];
     estimationErrs = [estimationErrs; trialEstimationErrs];
     estimationErrsCov = [estimationErrsCov; trialEstimationErrsCov];
     measInnovations = [measInnovations; trialMeasInnovations];
@@ -341,5 +354,8 @@ for i = 1:numTrials
 end
 
 % Plot typical simulation from first sim run
-plotEKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
+plotStates(t, xnoisy , "Noisy Truth States vs. Time, Typical EKF Run");
+%plotStates(t, trialTotalStates{1, :} , "Noisy Truth States vs. Time, Typical EKF Run");
+plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), "State Estimation Errors vs. Time, Typical EKF Run" );
+
 

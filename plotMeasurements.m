@@ -1,24 +1,4 @@
-function plotNLData(t,xnl, Q, R, trackingData)
-% Plot states
-    figure;
-    sgtitle('Total States vs. Time, Nonlinear Dynanmics - ODE45');
-    subplot(4, 1, 1);
-        plot(t, xnl(1, :));
-        ylabel('X (km)');
-        grid on;
-    subplot(4, 1, 2);
-        plot(t, xnl(2, :));
-        ylabel('\deltax (km/s)');
-        grid on;
-    subplot(4, 1, 3);
-        plot(t, xnl(3, :));
-        ylabel('Y (km)');
-        grid on;
-    subplot(4, 1, 4);
-        plot(t, xnl(4, :));
-        ylabel('\deltay (km/s)');
-        xlabel('Time t (s)');
-    grid on;
+function plotMeasurements(t, trackingData, title)
 % Plot measurements
     figure;
     for j = 1:length(trackingData)
@@ -55,13 +35,13 @@ function plotNLData(t,xnl, Q, R, trackingData)
     end
 
     % Add labels
-    sgtitle('Nonlinear Model Data Simulation');
+    sgtitle(title);
     subplot(3,1,1);
-        ylabel('Range (km)');
+        ylabel('\rho Range (km)');
     subplot(3,1,2);
-        ylabel('Range Rate (km/s)');
+        ylabel('\delta\rho Range Rate (km/s)');
     subplot(3,1,3);
-        ylabel('Elevation (rad)');
+        ylabel('\phi Elevation (rad)');
         xlabel('Time t (s)');
     hold off;
 end
