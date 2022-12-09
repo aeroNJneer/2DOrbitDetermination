@@ -269,22 +269,17 @@ measInnovationsCov = {};
 for i = 1:numTrials
     disp(['Running EKF trial ' int2str(i) '...']);
     % step 1: Initialize priors
-    xhatPlus = zeros(4,1);
     pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
     Sv = chol(pPlus, 'lower');
     
     % Draw intial state with perturbation and conduct truth model sim
     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
 
-    % simulate with no noise
-    [xnominal, ~] = simulateTruthModel(t, nomX0, zeros(2), zeros(3), stationNums);
     % Monte Carlo simulation for measurements
     [xnoisy, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
    
-    % compute xhatPlus with no noise at nominal point
-    [xhatPlus, ~] = simulateTruthModel([t(1) t(2)], nomX0, zeros(2), zeros(3), stationNums);
-    
-    xhatPlus = xhatPlus(:,end);
+    xhatPlus = X0;
+
     % Initialize this run's outputs
     trialPerturbations = {};
     trialTotalStates = {};
@@ -302,7 +297,6 @@ for i = 1:numTrials
         xhatMinus = xhatMinus(:,end);
         % Get stacked station measurements
         [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
-        dy = [];
         yhat = [];
         HtildeStacked = [];
         RStacked = [];
@@ -324,7 +318,7 @@ for i = 1:numTrials
             % Update estimation error covariance and compute measurement innovation 
             pPlus = (eye(size(K, 1))-K*HtildeStacked)*pMinus;
             dy = y-yhat;
-            xhatPlus = xhatMinus + (K * y);
+            xhatPlus = xhatMinus + (K * dy);
 
             % Compute measurement innovation covariance matrix
             S = HtildeStacked*pMinus*HtildeStacked' + RStacked;
@@ -346,10 +340,9 @@ for i = 1:numTrials
     end
 
     % Store trial output
-    filteredPerturbations = [filteredPerturbations; trialPerturbations];
     filteredTotalStates = [filteredTotalStates; trialTotalStates];
     truthTotalStates = [truthTotalStates; xnoisy];
-    simulatedMeasurements = [simulatedMeasurements; yhat];
+    simulatedMeasurements = [simulatedMeasurements; measY'];
     estimationErrs = [estimationErrs; trialEstimationErrs];
     estimationErrsCov = [estimationErrsCov; trialEstimationErrsCov];
     measInnovations = [measInnovations; trialMeasInnovations];
