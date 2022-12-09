@@ -10,13 +10,13 @@ function [measY] = parseGivenData(tvec, data)
 
     for i = 1:length(data)
         % Extract cell at time
-        trackAtTime = data(i);
+        trackAtTime = data{i};
 
         % Check to see if data exists for that time step
-        if ~isnan(trackAtTime{1})
+        if ~isnan(trackAtTime)
             % Iterate through all tracking data at timestep
-            for j = 1:length(trackAtTime)
-                trackPoint = trackAtTime{j};
+            for j = 1:size(trackAtTime,2)
+                trackPoint = trackAtTime(:,j);
 
                 % Query station map, add tracking data, and return to map array
                 stationData = measY{stationNums==trackPoint(4)};

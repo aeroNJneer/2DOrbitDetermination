@@ -354,4 +354,132 @@ plotStates(t, xnoisy , "Noisy Truth States vs. Time, Typical EKF Run");
 %plotStates(t(1:1400), trialTotalStates{1, 1, :}' , "Noisy Simulated States vs. Time, Typical EKF Run");
 plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), "State Estimation Errors vs. Time, Typical EKF Run" );
 
+%% Unknown Data LKF Run
+% Tuning inputs
+numTrials = 1;
+givenData = load('orbitdeterm_finalproj_KFdata.mat');
+Qkf = givenData.Qtrue;
+pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
 
+% Setup
+stationNums = 1:12;
+dt = 10;
+t = 0:dt:14000;
+r0 = 6678;
+mu = 398600;
+nomX0 = [r0; 0; 0; sqrt(mu/r0)];
+gamma = [0 0; 1 0; 0 0; 0 1]; 
+omegaTilde = dt * gamma; 
+
+% Initialize outputs. Each row is a different trial
+lkfPerturbations = [];
+lkfTotalStates = [];
+lkfEstimationErrsCov = [];
+actualMeasurements = [];
+
+% Initialize priors
+dxPlus = zeros(4,1);
+pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
+Sv = chol(pPlus, 'lower');
+
+% Draw intial state with perturbation and conduct truth model sim
+X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
+[nomX, nomY] = simulateTruthModel(t, nomX0, zeros(2), zeros(3), stationNums);
+measY = parseGivenData(givenData.tvec, givenData.ydata);
+
+% Begin LKF filtering
+for j = 2:length(t)
+    % Update step
+    Ftilde = eye(4) + getAtilde(nomX(:, j-1))*dt;
+    dxMinus = Ftilde*dxPlus;
+    pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde';
+    
+    % Get stacked station measurements
+    [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
+    yStar = [];
+    HtildeStacked = [];
+    RStacked = [];
+
+    if ~isempty(y)
+        % If there are measurements, then perform correction step by
+        % stacking nominal measurements y* and getting corresponding
+        % stacked Htilde and R matrices
+        for k=1:length(stationIDs)
+            yStar = [yStar; getNLMeasurement(t(j), nomX(:, j), stationIDs(k))];
+            HtildeStacked = [HtildeStacked; getHtilde(nomX(:, j), getStationState(t(j), stationIDs(k)))];
+            RSize = size(givenData.Rtrue, 1);   % R is square
+            RStacked = [RStacked [zeros((k-1)*RSize, RSize); givenData.Rtrue; zeros((length(stationIDs)-k)*RSize, RSize)]];
+        end
+
+        % Compute Kalman gain
+        K = pMinus * HtildeStacked' / (HtildeStacked*pMinus*HtildeStacked' + RStacked);
+
+        % Update estimation error covariance and compute measurement
+        % innovation as well as new perturbation state
+        pPlus = (eye(size(K, 1))-K*HtildeStacked)*pMinus;
+        dy = y-yStar;
+        dxPlus = dxMinus + K * (y-yStar - HtildeStacked*dxMinus);
+    else
+        % No measurements available, so carry forward pMinus and state
+        pPlus = pMinus;
+        dxPlus = dxMinus;
+
+        % dy and S are null
+        dy = [nan; nan; nan];
+        S = [nan nan nan; nan nan nan; nan nan nan];
+    end
+    
+    % Store outputs
+    lkfPerturbations = [lkfPerturbations dxPlus];
+    lkfTotalStates = [lkfTotalStates nomX(:, j)+dxPlus];
+    lkfEstimationErrsCov = [lkfEstimationErrsCov pPlus];
+    actualMeasurements = [actualMeasurements; measY'];
+end
+
+% Plot typical simulation from first sim run
+plotStates(t(2:end), lkfTotalStates, "Filtered Total States vs. Time, ydata LKF Run");
+plotStates(t(2:end), lkfPerturbations, "Filtered Perturbations vs. Time, ydata LKF Run");
+
+% Plot 2sigma cov
+    figure;
+    twoSigma1 = [];
+    for i = 1:size(lkfEstimationErrsCov, 2)/size(lkfEstimationErrsCov, 1)
+        twoSigma1 = [twoSigma1 2*sqrt(lkfEstimationErrsCov(1,i*size(lkfEstimationErrsCov, 1)-3))];
+    end
+    subplot(4,1,1);
+    hold on;
+    plot(t(2:end), twoSigma1);
+    title('State Estimation Error +2\sigma Bounds vs. Time, ydata LKF Run');
+    ylabel('X 2\sigma Bound [km]');
+    hold off;
+
+    twoSigma2 = [];
+    for i = 1:size(lkfEstimationErrsCov, 2)/size(lkfEstimationErrsCov, 1)
+        twoSigma2 = [twoSigma2 2*sqrt(lkfEstimationErrsCov(2,i*size(lkfEstimationErrsCov, 1)-2))];
+    end
+    subplot(4,1,2);
+    hold on;
+    plot(t(2:end), twoSigma2);
+    ylabel('Xdot 2\sigma Bound [km/s]');
+    hold off;
+
+    twoSigma3 = [];
+    for i = 1:size(lkfEstimationErrsCov, 2)/size(lkfEstimationErrsCov, 1)
+        twoSigma3 = [twoSigma3 2*sqrt(lkfEstimationErrsCov(3,i*size(lkfEstimationErrsCov, 1)-1))];
+    end
+    subplot(4,1,3);
+    hold on;
+    plot(t(2:end), twoSigma3);
+    ylabel('Y 2\sigma Bound [km]');
+    hold off;
+
+    twoSigma4 = [];
+    for i = 1:size(lkfEstimationErrsCov, 2)/size(lkfEstimationErrsCov, 1)
+        twoSigma4 = [twoSigma4 2*sqrt(lkfEstimationErrsCov(4,i*size(lkfEstimationErrsCov, 1)))];
+    end
+    subplot(4,1,4);
+    hold on;
+    plot(t(2:end), twoSigma4);
+    ylabel('Ydot 2\sigma Bound [km/s]');
+    xlabel('Time t (s)');
+    hold off;
