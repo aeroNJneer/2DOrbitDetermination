@@ -237,13 +237,16 @@ plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsC
 % t = 0:dt:14000;
 clear
 close all
+rng(100);
 numTrials = 2;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
-Qkf = givenData.Qtrue;
-pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
+Qkf = givenData.Qtrue
+diagonals = [1e-10 1e-10];
+offdiags = [2e-6 2e-6];
+%Qkf = [diagonals(1) offdiags(1); offdiags(2) diagonals(2)];
+pPlus0 = diag([.1 .001 .1 .001]);     % Selected such that the satellite doesn't crash into Earth
 
 % Setup
-rand(100);
 stationNums = 1:12;
 dt = 10;
 t = 0:dt:14000;
@@ -336,7 +339,7 @@ for i = 1:numTrials
         
         % Store outputs
         trialTotalStates = [trialTotalStates xhatPlus];
-        trialEstimationErrs = [trialEstimationErrs xnominal(:, j)-xhatPlus];
+        trialEstimationErrs = [trialEstimationErrs xnoisy(:, j)-xhatPlus];
         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
         trialMeasInnovations = [trialMeasInnovations dy];
         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
@@ -345,7 +348,7 @@ for i = 1:numTrials
     % Store trial output
     filteredPerturbations = [filteredPerturbations; trialPerturbations];
     filteredTotalStates = [filteredTotalStates; trialTotalStates];
-    truthTotalStates = [truthTotalStates; xnominal];
+    truthTotalStates = [truthTotalStates; xnoisy];
     simulatedMeasurements = [simulatedMeasurements; yhat];
     estimationErrs = [estimationErrs; trialEstimationErrs];
     estimationErrsCov = [estimationErrsCov; trialEstimationErrsCov];
@@ -355,7 +358,7 @@ end
 
 % Plot typical simulation from first sim run
 plotStates(t, xnoisy , "Noisy Truth States vs. Time, Typical EKF Run");
-% plotStates(t, trialTotalStates{1, :} , "Noisy Truth States vs. Time, Typical EKF Run");
+%plotStates(t(1:1400), trialTotalStates{1, 1, :}' , "Noisy Simulated States vs. Time, Typical EKF Run");
 plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), "State Estimation Errors vs. Time, Typical EKF Run" );
 
 
