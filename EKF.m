@@ -1,5 +1,5 @@
 function [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, xnoisy, measY] = ...
-EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums)
+EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
 
     pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
     Sv = chol(pPlus, 'lower');
@@ -9,7 +9,10 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums)
 
     % Monte Carlo simulation for measurements
     [xnoisy, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
-    
+    if (~sim)
+       % Parse data from file
+        measY = parseGivenData(givenData.tvec, givenData.ydata);
+    end
     xhatPlus = X0;
 
     % Initialize this run's outputs

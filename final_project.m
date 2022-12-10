@@ -239,6 +239,7 @@ clear
 close all
 rng(100);
 numTrials = 1;
+sim = false;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = givenData.Qtrue;
 R = givenData.Rtrue;
@@ -269,79 +270,7 @@ measInnovationsCov = {};
 
 for i = 1:numTrials
     disp(['Running EKF trial ' int2str(i) '...']);
-    [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, xnoisy, measY] = EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums);
-
-    % step 1: Initialize priors
-%     pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
-%     Sv = chol(pPlus, 'lower');
-%     
-%     % Draw intial state with perturbation and conduct truth model sim
-%     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
-% 
-%     % Monte Carlo simulation for measurements
-%     [xnoisy, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
-%    
-%     xhatPlus = X0;
-% 
-%     % Initialize this run's outputs
-%     trialPerturbations = {};
-%     trialTotalStates = {};
-%     trialEstimationErrs = {};
-%     trialEstimationErrsCov = {};
-%     trialMeasInnovations = {};
-%     trialMeasInnovationsCov = {};
-% 
-%     % Begin EKF filtering
-%     for j = 2:length(t)
-%         % Update step
-%         Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
-%         pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde';
-%         [xhatMinus, ~] = simulateTruthModel([t(j-1) t(j)], xhatPlus, zeros(2), zeros(3), stationNums);
-%         xhatMinus = xhatMinus(:,end);
-%         % Get stacked station measurements
-%         [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
-%         yhat = [];
-%         HtildeStacked = [];
-%         RStacked = [];
-%         if ~isempty(y)
-%             % If there are measurements, then perform correction step by
-%             % stacking nominal measurements y* per station and getting corresponding
-%             % stacked Htilde and R matrices
-%             for k=1:length(stationIDs)
-%                 % Compute a measurement for station j at time t(i)
-%                 yhat = [yhat; getNLMeasurement(t(j), xhatMinus, stationIDs(k))];
-%                 HtildeStacked = [HtildeStacked; getHtilde(xhatMinus, getStationState(t(j), stationIDs(k)))];
-%                 RSize = size(givenData.Rtrue, 1);   % R is square
-%                 RStacked = [RStacked [zeros((k-1)*RSize, RSize); givenData.Rtrue; zeros((length(stationIDs)-k)*RSize, RSize)]];
-%             end
-% 
-%             % Compute Kalman gain
-%             K = pMinus * HtildeStacked' / (HtildeStacked*pMinus*HtildeStacked' + RStacked);
-%     
-%             % Update estimation error covariance and compute measurement innovation 
-%             pPlus = (eye(size(K, 1))-K*HtildeStacked)*pMinus;
-%             dy = y-yhat;
-%             xhatPlus = xhatMinus + (K * dy);
-% 
-%             % Compute measurement innovation covariance matrix
-%             S = HtildeStacked*pMinus*HtildeStacked' + RStacked;
-%         else
-%             % No measurements available, so carry forward pMinus and state
-%             pPlus = pMinus;
-%             xhatPlus = xhatMinus;
-%             % dy and S are null
-%             dy = [nan; nan; nan];
-%             S = [nan nan nan; nan nan nan; nan nan nan];
-%         end
-%         
-%         % Store outputs
-%         trialTotalStates = [trialTotalStates xhatPlus];
-%         trialEstimationErrs = [trialEstimationErrs xnoisy(:, j)-xhatPlus];
-%         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
-%         trialMeasInnovations = [trialMeasInnovations dy];
-%         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
-%     end
-
+    [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, xnoisy, measY] = EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim);
     % Store trial output
     filteredTotalStates = [filteredTotalStates; trialTotalStates];
     truthTotalStates = [truthTotalStates; xnoisy];
@@ -352,9 +281,17 @@ for i = 1:numTrials
     measInnovationsCov = [measInnovationsCov; trialMeasInnovationsCov];
 end
 
+if(sim)
+    run = "Monte Carlo";
+else
+    run = "Real Data";
+end
 % Plot typical simulation from first sim run
-plotStates(t, xnoisy , "Noisy Truth States vs. Time, Typical EKF Run");
-plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), "State Estimation Errors vs. Time, Typical EKF Run" );
+plotStates(t, xnoisy , strcat("Noisy Truth States vs. Time, ", run, " EKF Run"));
+plotStates(t(2:end), cell2mat(trialTotalStates(1, :)) , strcat("Filtered States vs. Time, ", run, " EKF Run"));
+
+plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ));
+plotMeasurements(t,measY, strcat("Measurement Data - ", run, " EKF Run"));
 
 %% Unknown Data LKF Run
 % Tuning inputs
