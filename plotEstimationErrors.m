@@ -3,7 +3,7 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
     figure;
     threeSigma1 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
-        threeSigma1 = [threeSigma1 3*sqrt(estErrCov(1,i*size(estErrCov, 1)-3))];
+        threeSigma1 = [threeSigma1 2*sqrt(estErrCov(1,i*size(estErrCov, 1)-3))];
     end
     subplot(4,1,1);
     hold on;
@@ -12,12 +12,12 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
     plot(t(2:end), -threeSigma1, '--b');
     sgtitle(title);
     ylabel('X Est. Error [km]');
-    legend('Est. Error', '+/- 3\sigma bounds')
+    legend('Est. Error', '+/- 2\sigma bounds')
     hold off;
 
     threeSigma2 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
-        threeSigma2 = [threeSigma2 3*sqrt(estErrCov(2,i*size(estErrCov, 1)-2))];
+        threeSigma2 = [threeSigma2 2*sqrt(estErrCov(2,i*size(estErrCov, 1)-2))];
     end
     subplot(4,1,2);
     hold on;
@@ -29,7 +29,7 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
 
     threeSigma3 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
-        threeSigma3 = [threeSigma3 3*sqrt(estErrCov(3,i*size(estErrCov, 1)-1))];
+        threeSigma3 = [threeSigma3 2*sqrt(estErrCov(3,i*size(estErrCov, 1)-1))];
     end
     subplot(4,1,3);
     hold on;
@@ -41,7 +41,7 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
 
     threeSigma4 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
-        threeSigma4 = [threeSigma4 3*sqrt(estErrCov(4,i*size(estErrCov, 1)))];
+        threeSigma4 = [threeSigma4 2*sqrt(estErrCov(4,i*size(estErrCov, 1)))];
     end
     subplot(4,1,4);
     hold on;
