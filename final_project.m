@@ -1,5 +1,7 @@
 close all
 clear
+rng(100);
+% constants
 mu = 398600; % gravitational constant
 omegaE = 2*pi/86400;  % angular velocity of earth
 rE = 6378; % radius of earth
@@ -31,8 +33,8 @@ for i = 1:length(stationNums)
 end
 
 Y = getMeasurements(Y, tout, xnl, stationNums, 0);
-plotStates(tout, xnl, "Total States vs. Time, Nonlinear Dynanmics - ODE45");
-plotMeasurements(tout, Y, "Nonlinear Model Data Simulation");
+generatePlots("states", tout, xnl, NaN, "Total States vs. Time, Nonlinear Dynanmics - ODE45");
+generatePlots("msmt", tout, Y, NaN, "Nonlinear Model Data Simulation");
 % end of NL simulation
 
 %% Approximate linearized simulation
@@ -100,10 +102,10 @@ end
 
 % Plot
 % plotLinearizedData(t,x,dx,xnl,trackingData);
-plotStates(t,x, "Total States vs. Time, Linearized DT SS Model");
-plotStates(t,dx, "Approx Perturbations vs. Time, Linearized DT SS Model");
-plotStates(t,x-xnl, "State Error vs. Time, Linearized DT SS Model vs. ODE45");
-plotMeasurements(t,trackingData, "Approximate Linearized Model Data Simulation");
+generatePlots("states", t,x, NaN, "Total States vs. Time, Linearized DT SS Model");
+generatePlots("states", t,dx, NaN, "Approx Perturbations vs. Time, Linearized DT SS Model");
+generatePlots("states", t,x-xnl, NaN, "State Error vs. Time, Linearized DT SS Model vs. ODE45");
+generatePlots("msmt", t,trackingData,NaN, "Approximate Linearized Model Data Simulation");
 %% LKF Implementation
 % Tuning inputs
 numTrials = 1;
@@ -217,27 +219,19 @@ for i = 1:numTrials
 end
 
 % Plot Monte Carlo simulated states and measurements
-plotStates(t, nomX, "Truth States vs. Time, Monte Carlo Run");
-plotStates(t, truthX, "Noisy Truth States vs. Time, Monte Carlo Run");
-plotMeasurements(t, measY, "Noisy Simulated Measurements, Monte Carlo Run")
-%plotSimulationData(t, nomX, truthXnom, nomY, measY, stationNums);
+generatePlots("states", t, nomX,NaN, "Truth States vs. Time, Monte Carlo Run");
+generatePlots("states", t, truthX, NaN, "Noisy Truth States vs. Time, Monte Carlo Run");
+generatePlots("msmt", t, measY, NaN, "Noisy Simulated Measurements, Monte Carlo Run")
 
 % Plot typical simulation from first sim run
-plotStates(t, truthTotalStates{1, :}, "Noisy Truth States vs. Time, Typical LKF Run");
-%plotStates(t, filteredTotalStates{1, :}, "Noisy Simulated States vs. Time, Typical LKF Run");
-
-plotMeasurements(t, simulatedMeasurements(1, :), "Noisy Simulated Measurements, Typical LKF Run");
-plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)) , "State Estimation Errors vs. Time, Typical LKF Run")
-%plotLKFData(t, truthTotalStates{1, :}, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), simulatedMeasurements(1, :));
+generatePlots("states", t, truthTotalStates{1, :}, NaN,"Noisy Truth States vs. Time, Typical LKF Run");
+generatePlots("states", t(2:end), cell2mat(filteredTotalStates(1, :)), NaN, "Noisy Simulated States vs. Time, Typical LKF Run");
+generatePlots("msmt", t, simulatedMeasurements(1, :), NaN, "Noisy Simulated Measurements, Typical LKF Run");
+generatePlots("errors", t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)) , "State Estimation Errors vs. Time, Typical LKF Run")
 
 
 %% EKF Implementation
 % Tuning inputs
-% stationNums = 1:12;
-% t = 0:dt:14000;
-clear
-close all
-rng(100);
 numTrials = 1;
 sim = false;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
@@ -284,14 +278,14 @@ end
 if(sim)
     run = "Monte Carlo";
 else
-    run = "Real Data";
+    run = "ydata";
 end
 % Plot typical simulation from first sim run
-plotStates(t, xnoisy , strcat("Noisy Truth States vs. Time, ", run, " EKF Run"));
-plotStates(t(2:end), cell2mat(trialTotalStates(1, :)) , strcat("Filtered States vs. Time, ", run, " EKF Run"));
+generatePlots("states", t, xnoisy ,"", strcat("Noisy Truth States vs. Time, ", run, " EKF Run"));
+generatePlots("states", t(2:end), cell2mat(trialTotalStates(1, :)) , NaN,  strcat("Filtered States vs. Time, ", run, " EKF Run"));
 
-plotEstimationErrors(t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ));
-plotMeasurements(t,measY, strcat("Measurement Data - ", run, " EKF Run"));
+generatePlots("errors", t, cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)), strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ));
+generatePlots("msmt", t, measY, "", strcat("Measurement Data, ", run, " EKF Run"));
 
 %% Unknown Data LKF Run
 % Tuning inputs
@@ -376,8 +370,8 @@ for j = 2:length(t)
 end
 
 % Plot typical simulation from first sim run
-plotStates(t(2:end), lkfTotalStates, "Filtered Total States vs. Time, ydata LKF Run");
-plotStates(t(2:end), lkfPerturbations, "Filtered Perturbations vs. Time, ydata LKF Run");
+generatePlots("states", t(2:end), lkfTotalStates, "", "Filtered Total States vs. Time, ydata LKF Run");
+generatePlots("states", t(2:end), lkfPerturbations, "", "Filtered Perturbations vs. Time, ydata LKF Run");
 
 % Plot 2sigma cov
     figure;
@@ -388,7 +382,7 @@ plotStates(t(2:end), lkfPerturbations, "Filtered Perturbations vs. Time, ydata L
     subplot(4,1,1);
     hold on;
     plot(t(2:end), twoSigma1);
-    title('State Estimation Error +2\sigma Bounds vs. Time, ydata LKF Run');
+    sgtitle('State Estimation Error +2\sigma Bounds vs. Time, ydata LKF Run');
     ylabel('X 2\sigma Bound [km]');
     hold off;
 
