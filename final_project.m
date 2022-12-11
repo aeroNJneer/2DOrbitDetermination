@@ -132,8 +132,6 @@ estimationErrs = {};
 estimationErrsCov = {};
 measInnovations = {};
 measInnovationsCov = {};
-NEES = {};
-NIS = {};
 
 for i = 1:numTrials
     disp(['Running LKF trial ' int2str(i) '...']);
@@ -154,8 +152,6 @@ for i = 1:numTrials
     trialEstimationErrsCov = {};
     trialMeasInnovations = {};
     trialMeasInnovationsCov = {};
-    trialNEES = {};
-    trialNIS = {};
 
     % Begin LKF filtering
     for j = 2:length(t)
@@ -209,8 +205,6 @@ for i = 1:numTrials
         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
         trialMeasInnovations = [trialMeasInnovations dy];
         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
-        trialNEES = [trialNEES (truthX(:, j)-trialTotalStates{:, end})' * (pPlus)^(-1) * (truthX(:, j)-trialTotalStates{:, end})];
-        trialNIS = [trialNIS dy'*(S)^(-1)*dy];
     end
 
     % Store trial output
@@ -222,16 +216,12 @@ for i = 1:numTrials
     estimationErrsCov = [estimationErrsCov; trialEstimationErrsCov];
     measInnovations = [measInnovations; trialMeasInnovations];
     measInnovationsCov = [measInnovationsCov; trialMeasInnovationsCov];
-    NEES = {NEES; trialNEES};
-    NIS = {NIS; trialNIS};
 end
-alpha = 0.5;
-opts = [alpha, numTrials];
+
 % Plot Monte Carlo simulated states and measurements
 generatePlots("states", t, nomX,NaN, "Truth States vs. Time, Monte Carlo Run");
 generatePlots("states", t, truthX, NaN, "Noisy Truth States vs. Time, Monte Carlo Run");
 generatePlots("msmt", t, measY, NaN, "Noisy Simulated Measurements, Monte Carlo Run")
-
 
 % Plot typical simulation from first sim run
 generatePlots("states", t, truthTotalStates{1, :}, NaN,"Noisy Truth States vs. Time, Typical LKF Run");

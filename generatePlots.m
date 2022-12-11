@@ -5,10 +5,6 @@ function generatePlots(type, t, data, data2, title)
         plotStates(t, data, title)
     elseif (type == "errors")
         plotEstimationErrors(t, data, data2, title )
-    elseif (type == "NEES")
-        plotNeesNis("NEES", t, data, data2, title )
-    elseif (type == "NIS")
-        plotNeesNis("NIS", t, data, data2, title )
     end
 end
 
@@ -137,18 +133,3 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
     hold off;
 
 end
-
-function plotNeesNis(type, t, data, data1, title)
-    bar = mean(cell2mat(data),1);
-    alpha = data1(1,1);
-    numTrials = data1(1,2);
-    r1 = chi2inv(alpha/2,4*numTrials)/numTrials;
-    r2 = chi2inv(1-alpha/2,4*numTrials)/numTrials;
-    
-    figure
-    scatter(t(2:end),bar)
-    xlabel('Time (s)')
-    ylabel(concat(type, ' statistic'))
-
-end
-
