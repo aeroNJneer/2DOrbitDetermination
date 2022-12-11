@@ -1,4 +1,4 @@
-function [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, xnoisy, measY] = ...
+function [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, trialNEES, trialNIS, xnoisy, measY] = ...
 EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
 
     pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
@@ -21,6 +21,8 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     trialEstimationErrsCov = {};
     trialMeasInnovations = {};
     trialMeasInnovationsCov = {};
+    trialNEES = {};
+    trialNIS = {};
 
     for j = 2:length(t)
         % Update step
@@ -69,5 +71,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
         trialMeasInnovations = [trialMeasInnovations dy];
         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
+        trialNEES = [trialNEES (xnoisy(:, j)-trialTotalStates{:, end})' * (pPlus)^(-1) * (xnoisy(:, j)-trialTotalStates{:, end})];
+        trialNIS = [trialNIS dy'*(S)^(-1)*dy];
         end
 end
