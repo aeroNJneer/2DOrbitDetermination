@@ -2,6 +2,7 @@ close all
 clear
 rng(100);
 % constants
+ymax = 100;     % y-limit for NEES/NIS plots
 mu = 398600; % gravitational constant
 omegaE = 2*pi/86400;  % angular velocity of earth
 rE = 6378; % radius of earth
@@ -109,6 +110,7 @@ generatePlots("msmt", t, "Approximate Linearized Model Data Simulation", trackin
 
 %% LKF Implementation
 % Tuning inputs
+
 numTrials = 10;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-2;
@@ -123,6 +125,7 @@ mu = 398600;
 nomX0 = [r0; 0; 0; sqrt(mu/r0)];
 gamma = [0 0; 1 0; 0 0; 0 1]; 
 omegaTilde = dt * gamma; 
+alpha = .05;
 
 % Initialize outputs. Each row is a different trial
 filteredPerturbations = {};
@@ -227,53 +230,23 @@ for i = 1:numTrials
     NIS = [NIS; trialNIS];
 end
 
-% plot NEES/NIS
-NEES_bar = mean(cell2mat(NEES));
-NIS_bar = mean(cell2mat(NIS));
-alpha = .05;
-r1nees = chi2inv(alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
 
-figure
-subplot(2,1,1)
-hold on
-sgtitle("NEES and NIS plots for LKF")
-scatter(t(2:end),NEES_bar, 5)
-plot(t(2:end), r1nees, '--b', t(2:end),r2nees, '--b')
-xlabel('Time (s)'); xlim([0 1500])
-ylabel('NEES statistic'); ylim([0 10])
-
-subplot(2,1,2)
-hold on
-scatter(t(2:end),NIS_bar, 5)
-plot(t(2:end), r1nis, '--b', t(2:end), r2nis, '--b');
-xlabel('Time (s)'); xlim([0 1500])
-ylabel('NIS statistic'); ylim([0 10])
-
-%generatePlots("NeesNis",  t, "NEES NIS", NEES, NIS=NIS) %, alpha=0.5, numTrials=numTrials)
-% Plot Monte Carlo simulated states and measurements
-% generatePlots("states", t, "Truth States vs. Time, Monte Carlo Run", nomX );
-% generatePlots("states", t, "Noisy Truth States vs. Time, Monte Carlo Run", truthX );
-% generatePlots("msmt", t, "Noisy Simulated Measurements, Monte Carlo Run", measY )
-% 
-% % Plot typical simulation from first sim run
+% Plot typical simulation from first sim run
 generatePlots("states", t, "Noisy Truth States vs. Time, Typical LKF Run", truthTotalStates{1, :});
 generatePlots("states", t(2:end), "Filtered States vs. Time, Typical LKF Run", cell2mat(filteredTotalStates(1, :)));
 generatePlots("msmt", t, "Noisy Simulated Measurements, Typical LKF Run", simulatedMeasurements(1, :));
 generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)))
+% plot NEES/NIS
+plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t), ymax)
+
 %% EKF Implementation
 % Tuning inputs
-
 numTrials = 10;
 sim = true;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-10;
 R = givenData.Rtrue;
-diagonals = [1e-10 1e-10];
-offdiags = [0 0];
-%Qkf = [diagonals(1) offdiags(1); offdiags(2) diagonals(2)];
+alpha = 0.05;
 pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
 % Setup
 stationNums = 1:12;
@@ -316,40 +289,17 @@ for i = 1:numTrials
 end
 
 
-NEES_bar = mean(cell2mat(NEES));
-NIS_bar = mean(cell2mat(NIS));
-alpha = .05;
-r1nees = chi2inv(alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-
 if(sim)
     run = "Monte Carlo";
 else
     run = "ydata";
 end
 % Plot typical simulation from first sim run
-% generatePlots("states", t, strcat("Noisy Truth States vs. Time, ", run, " EKF Run"), xnoisy );
 generatePlots("states", t(2:end), strcat("Filtered States vs. Time, ", run, " EKF Run"), cell2mat(trialTotalStates(1, :)));
 generatePlots("errors", t, strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)));
 generatePlots("innov", t, strcat("Measurement Innovations, ", run, " EKF Run"), measInnovations);
 % plot NEES/NIS
-figure
-subplot(2,1,1)
-hold on
-sgtitle("NEES and NIS plots for EKF")
-scatter(t(2:end),NEES_bar, 5)
-plot(t(2:end), r1nees, t(2:end),r2nees)
-xlabel('Time (s)'); %xlim([0 2000])
-ylabel('NEES statistic'); %ylim([-1 20])
-
-subplot(2,1,2)
-hold on
-scatter(t(2:end),NIS_bar, 5)
-plot(t(2:end), r1nis,t(2:end), r2nis);
-xlabel('Time (s)'); %xlim([0 2000])
-ylabel('NIS statistic'); %ylim([0 15])
+plotNeesNis(t,NEES,NIS, alpha, numTrials, 'NEES and NIS plots for EKF' , length(t), ymax)
 
 %% Unknown Data LKF Run
 % Tuning inputs
@@ -357,7 +307,7 @@ numTrials = 1;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-2;
 pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
-
+alpha = 0.05;
 % Setup
 stationNums = 1:12;
 dt = 10;
@@ -439,14 +389,14 @@ for j = 2:length(t)
     NIS = [NIS dy'*(S)^(-1)*dy];
 end
 
-NEES_bar = mean(NEES,1);
-NIS_bar = mean(NIS,1);
-alpha = .05;
-r1nees = chi2inv(alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-
+% NEES_bar = mean(NEES,1);
+% NIS_bar = mean(NIS,1);
+% alpha = .05;
+% r1nees = chi2inv(alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
+% r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
+% r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
+% r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
+% 
 
 % Plot typical simulation from first sim run
 generatePlots("states", t(2:end), "Filtered Total States vs. Time, ydata LKF Run", lkfTotalStates);
@@ -496,20 +446,5 @@ generatePlots("states", t(2:end), "Filtered Perturbations vs. Time, ydata LKF Ru
     xlabel('Time t (s)');
     hold off;
 
+plotNeesNis(t,NEES, NIS, alpha, numTrials, 'NEES and NIS plots for ydata LKF run', length(t), ymax)
 
-figure
-subplot(2,1,1)
-hold on
-sgtitle("NEES and NIS plots for ydata LKF run")
-scatter(t(2:end),NEES_bar, 5)
-plot(t(2:end), r1nees, t(2:end),r2nees)
-xlabel('Time (s)'); %xlim([0 2000])
-ylabel('NEES statistic'); %ylim([-1 20])
-hold off
-subplot(2,1,2)
-hold on
-scatter(t(2:end),NIS_bar, 5)
-plot(t(2:end), r1nis,t(2:end), r2nis);
-xlabel('Time (s)'); %xlim([0 2000])
-ylabel('NIS statistic'); %ylim([-1 15])
-hold off
