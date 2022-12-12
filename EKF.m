@@ -80,7 +80,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
         trialMeasInnovations = [trialMeasInnovations dy];
         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
-        trialNEES = [trialNEES (xnoisy(:, j)-xhatPlus') * (pPlus)^(-1) * (xnoisy(:, j)-xhatPlus)];
+        trialNEES = [trialNEES (xnoisy(:, j)-xhatPlus)' * (pPlus)^(-1) * (xnoisy(:, j)-xhatPlus)];
         trialNIS = [trialNIS dy'*(S)^(-1)*dy];
      end
 end
