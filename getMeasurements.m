@@ -1,8 +1,8 @@
 function [Y] = getMeasurements(Y, t, X, stationNums, SvR)
 
 % Compute measurements
+for j = 1:length(stationNums)
     for i = 1:length(t)
-        for j = 1:length(stationNums)
             % Identify the current station's state vector
             stationID = stationNums(j);
             stationState = getStationState(t(i), stationID);
