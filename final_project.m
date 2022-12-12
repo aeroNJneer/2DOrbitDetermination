@@ -109,7 +109,6 @@ generatePlots("msmt", t, "Approximate Linearized Model Data Simulation", trackin
 
 %% LKF Implementation
 % Tuning inputs
-
 numTrials = 10;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-2;
@@ -228,6 +227,19 @@ for i = 1:numTrials
     NIS = [NIS; trialNIS];
 end
 
+%generatePlots("NeesNis",  t, "NEES NIS", NEES, NIS=NIS) %, alpha=0.5, numTrials=numTrials)
+% Plot Monte Carlo simulated states and measurements
+% generatePlots("states", t, "Truth States vs. Time, Monte Carlo Run", nomX );
+% generatePlots("states", t, "Noisy Truth States vs. Time, Monte Carlo Run", truthX );
+% generatePlots("msmt", t, "Noisy Simulated Measurements, Monte Carlo Run", measY )
+% 
+% % Plot typical simulation from first sim run
+generatePlots("states", t, "Noisy Truth States vs. Time, Typical LKF Run", truthTotalStates{1, :});
+generatePlots("states", t(2:end), "Filtered States vs. Time, Typical LKF Run", cell2mat(filteredTotalStates(1, :)));
+generatePlots("msmt", t, "Noisy Simulated Measurements, Typical LKF Run", simulatedMeasurements(1, :));
+generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)))
+
+% plot NEES/NIS
 NEES_bar = mean(cell2mat(NEES));
 NIS_bar = mean(cell2mat(NIS));
 alpha = .05;
@@ -252,7 +264,6 @@ plot(t(2:end), r1nis, '--b', t(2:end), r2nis, '--b');
 xlabel('Time (s)'); xlim([0 1500])
 ylabel('NIS statistic'); ylim([0 10])
 
-
 %generatePlots("NeesNis",  t, "NEES NIS", NEES, NIS=NIS) %, alpha=0.5, numTrials=numTrials)
 % Plot Monte Carlo simulated states and measurements
 % generatePlots("states", t, "Truth States vs. Time, Monte Carlo Run", nomX );
@@ -264,8 +275,6 @@ generatePlots("states", t, "Noisy Truth States vs. Time, Typical LKF Run", truth
 generatePlots("states", t(2:end), "Filtered States vs. Time, Typical LKF Run", cell2mat(filteredTotalStates(1, :)));
 generatePlots("msmt", t, "Noisy Simulated Measurements, Typical LKF Run", simulatedMeasurements(1, :));
 generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)))
-
-
 %% EKF Implementation
 % Tuning inputs
 
@@ -327,6 +336,17 @@ r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
 r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
 r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
 
+if(sim)
+    run = "Monte Carlo";
+else
+    run = "ydata";
+end
+% Plot typical simulation from first sim run
+% generatePlots("states", t, strcat("Noisy Truth States vs. Time, ", run, " EKF Run"), xnoisy );
+generatePlots("states", t(2:end), strcat("Filtered States vs. Time, ", run, " EKF Run"), cell2mat(trialTotalStates(1, :)));
+generatePlots("errors", t, strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)));
+generatePlots("innov", t, strcat("Measurement Innovations, ", run, " EKF Run"), measInnovations);
+% plot NEES/NIS
 figure
 subplot(2,1,1)
 hold on
@@ -341,19 +361,7 @@ hold on
 scatter(t(2:end),NIS_bar, 5)
 plot(t(2:end), r1nis,t(2:end), r2nis);
 xlabel('Time (s)'); %xlim([0 2000])
-ylabel('NIS statistic'); %ylim([-1 15])
-
-if(sim)
-    run = "Monte Carlo";
-else
-    run = "ydata";
-end
-% Plot typical simulation from first sim run
-% generatePlots("states", t, strcat("Noisy Truth States vs. Time, ", run, " EKF Run"), xnoisy );
-generatePlots("states", t(2:end), strcat("Filtered States vs. Time, ", run, " EKF Run"), cell2mat(trialTotalStates(1, :)));
-
-generatePlots("errors", t, strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)));
-generatePlots("innov", t, strcat("Measurement Innovations, ", run, " EKF Run"), measInnovations);
+ylabel('NIS statistic'); %ylim([0 15])
 
 %% Unknown Data LKF Run
 % Tuning inputs
@@ -371,13 +379,14 @@ mu = 398600;
 nomX0 = [r0; 0; 0; sqrt(mu/r0)];
 gamma = [0 0; 1 0; 0 0; 0 1]; 
 omegaTilde = dt * gamma; 
-
+numTrials = 1;
 % Initialize outputs. Each row is a different trial
 lkfPerturbations = [];
 lkfTotalStates = [];
 lkfEstimationErrsCov = [];
 actualMeasurements = [];
-
+NEES = [];
+NIS = [];
 % Initialize priors
 dxPlus = zeros(4,1);
 pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
@@ -420,6 +429,9 @@ for j = 2:length(t)
         pPlus = (eye(size(K, 1))-K*HtildeStacked)*pMinus;
         dy = y-yStar;
         dxPlus = dxMinus + K * (y-yStar - HtildeStacked*dxMinus);
+        % Compute measurement innovation covariance matrix
+        S = HtildeStacked*pMinus*HtildeStacked' + RStacked;
+
     else
         % No measurements available, so carry forward pMinus and state
         pPlus = pMinus;
@@ -435,7 +447,18 @@ for j = 2:length(t)
     lkfTotalStates = [lkfTotalStates nomX(:, j)+dxPlus];
     lkfEstimationErrsCov = [lkfEstimationErrsCov pPlus];
     actualMeasurements = [actualMeasurements; measY'];
+    NEES = [NEES (truthX(:, j)-trialTotalStates{:, end})' * (pPlus)^(-1) * (truthX(:, j)-trialTotalStates{:, end})];
+    NIS = [NIS dy'*(S)^(-1)*dy];
 end
+
+NEES_bar = mean(NEES,1);
+NIS_bar = mean(NIS,1);
+alpha = .05;
+r1nees = chi2inv(alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
+r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
+r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
+r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
+
 
 % Plot typical simulation from first sim run
 generatePlots("states", t(2:end), "Filtered Total States vs. Time, ydata LKF Run", lkfTotalStates);
@@ -484,3 +507,21 @@ generatePlots("states", t(2:end), "Filtered Perturbations vs. Time, ydata LKF Ru
     ylabel('Ydot 2\sigma Bound [km/s]');
     xlabel('Time t (s)');
     hold off;
+
+
+figure
+subplot(2,1,1)
+hold on
+sgtitle("NEES and NIS plots for ydata LKF run")
+scatter(t(2:end),NEES_bar, 5)
+plot(t(2:end), r1nees, t(2:end),r2nees)
+xlabel('Time (s)'); %xlim([0 2000])
+ylabel('NEES statistic'); %ylim([-1 20])
+hold off
+subplot(2,1,2)
+hold on
+scatter(t(2:end),NIS_bar, 5)
+plot(t(2:end), r1nis,t(2:end), r2nis);
+xlabel('Time (s)'); %xlim([0 2000])
+ylabel('NIS statistic'); %ylim([-1 15])
+hold off
