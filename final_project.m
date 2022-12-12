@@ -227,18 +227,6 @@ for i = 1:numTrials
     NIS = [NIS; trialNIS];
 end
 
-%generatePlots("NeesNis",  t, "NEES NIS", NEES, NIS=NIS) %, alpha=0.5, numTrials=numTrials)
-% Plot Monte Carlo simulated states and measurements
-% generatePlots("states", t, "Truth States vs. Time, Monte Carlo Run", nomX );
-% generatePlots("states", t, "Noisy Truth States vs. Time, Monte Carlo Run", truthX );
-% generatePlots("msmt", t, "Noisy Simulated Measurements, Monte Carlo Run", measY )
-% 
-% % Plot typical simulation from first sim run
-generatePlots("states", t, "Noisy Truth States vs. Time, Typical LKF Run", truthTotalStates{1, :});
-generatePlots("states", t(2:end), "Filtered States vs. Time, Typical LKF Run", cell2mat(filteredTotalStates(1, :)));
-generatePlots("msmt", t, "Noisy Simulated Measurements, Typical LKF Run", simulatedMeasurements(1, :));
-generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)))
-
 % plot NEES/NIS
 NEES_bar = mean(cell2mat(NEES));
 NIS_bar = mean(cell2mat(NIS));
