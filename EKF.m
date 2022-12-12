@@ -1,4 +1,4 @@
-function [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, xnoisy, measY] = ...
+function [trialTotalStates, trialEstimationErrs, trialEstimationErrsCov, trialMeasInnovations, trialMeasInnovationsCov, xnoisy, measY, trialNEES, trialNIS] = ...
 EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
 
     pPlus = pPlus0;    % Selected such that the satellite generally stays outside the Earth
@@ -8,7 +8,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
 
     % Monte Carlo simulation for measurements
-    [xnoisy, measY] = simulateTruthModel(t, X0, givenData.Qtrue, givenData.Rtrue, stationNums);
+    [xnoisy, measY] = simulateTruthModel(t, X0, Qkf, givenData.Rtrue, stationNums);
     if (~sim)
        % Parse data from file
         measY = parseGivenData(givenData.tvec, givenData.ydata);
@@ -21,13 +21,24 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     trialEstimationErrsCov = {};
     trialMeasInnovations = {};
     trialMeasInnovationsCov = {};
-
+    trialNEES = {};
+    trialNIS = {};
+    scale=.5;
     for j = 2:length(t)
         % Update step
+        if(j>3000)
+            scale = 0.1;
+        elseif (j>5000)
+            scale = 0.01;
+        elseif (j>8000)
+            scale = .001
+        end
+           
         Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
-        pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde';
+        pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde'*scale;
         [xhatMinus, ~] = simulateTruthModel([t(j-1) t(j)], xhatPlus, zeros(2), zeros(3), stationNums);
         xhatMinus = xhatMinus(:,end);
+        
         % Get stacked station measurements
         [y, stationIDs] = getStackedMeasAtTime(t(j), measY);
         yhat = [];
@@ -69,5 +80,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
         trialEstimationErrsCov = [trialEstimationErrsCov pPlus];
         trialMeasInnovations = [trialMeasInnovations dy];
         trialMeasInnovationsCov = [trialMeasInnovationsCov S];
-        end
+        trialNEES = [trialNEES (xnoisy(:, j)-xhatPlus') * (pPlus)^(-1) * (xnoisy(:, j)-xhatPlus)];
+        trialNIS = [trialNIS dy'*(S)^(-1)*dy];
+     end
 end

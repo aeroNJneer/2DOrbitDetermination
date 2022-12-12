@@ -1,10 +1,15 @@
-function generatePlots(type, t, data, data2, title)
+function generatePlots(type, t, title, data, varargin)
     if (type == "msmt")
         plotMeasurements(t, data, title)
     elseif (type == "states")
         plotStates(t, data, title)
     elseif (type == "errors")
-        plotEstimationErrors(t, data, data2, title )
+        data1 = varargin{1,:};
+        plotEstimationErrors(t, title, data, data1 )
+%     elseif(type=="NeesNis")
+%         plotN(t, title, data, varargin)
+%     elseif(type == "innov")
+%         plotInnovations(t, data, title)
     end
 end
 
@@ -30,6 +35,28 @@ function plotStates(t, x, title)
     grid on;
 end
 
+% function plotInnovations(t, y, title)
+%     data = cell2mat(y{});
+% 
+%     figure
+%     for j = 1:5
+%         subplot(3,1,j)
+%         hold on
+%         plot(t, data(j,:))
+%     end
+%     
+%     % Add labels
+%     sgtitle(title);
+%     subplot(3,1,1);
+%         ylabel('\rho Range (km)');
+%     subplot(3,1,2);
+%         ylabel('\rhodot Range Rate (km/s)');
+%     subplot(3,1,3);
+%         ylabel('\phi Elevation (rad)');
+%         xlabel('Time t (s)');
+%     hold off;
+% 
+% end 
 function plotMeasurements(t, trackingData, title)
 % Plot measurements
     figure;
@@ -57,13 +84,13 @@ function plotMeasurements(t, trackingData, title)
         % Plot with with single color for this tracking station
         subplot(3,1,1);
             hold on
-            scatter(time, range);
+            scatter(time, range,5);
         subplot(3,1,2);
             hold on
-            scatter(time, rangeRate);
+            scatter(time, rangeRate,5);
         subplot(3,1,3);
             hold on
-            scatter(time, elevation);
+            scatter(time, elevation,5);
     end
 
     % Add labels
@@ -78,8 +105,7 @@ function plotMeasurements(t, trackingData, title)
     hold off;
 end
 
-function plotEstimationErrors(t, estErr, estErrCov, title)
-   %% Plot LKF estimation errors
+function plotEstimationErrors(t, title, estErr, estErrCov)
     figure;
     threeSigma1 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
@@ -133,3 +159,30 @@ function plotEstimationErrors(t, estErr, estErrCov, title)
     hold off;
 
 end
+
+% function plotN(t, title, NEES, varargin)
+% arguments
+%     t;
+%     title;
+%     NEES ;
+%     varargin{1}=NIS;
+%     varargin{2}=alpha;
+%     varargin{3}=numTrials;
+% 
+% end
+%     NEES_bar = mean(cell2mat(NEES),1);
+%     NIS_bar = mean(cell2mat(opts.NIS),1);
+%     r1 = chi2inv(opts.alpha/2,4*numTrials)/numTrials;
+%     r2 = chi2inv(1-opts.alpha/2,4*numTrials)/numTrials;
+%     
+%     figure
+%     subplot(2,1,1)
+%     scatter(t(2:end),NEES_bar)
+%     xlabel('Time (s)')
+%     ylabel('NEES statistic')
+%     
+%     subplot(2,1,2)
+%     scatter(t(2:end),NIS_bar)
+%     xlabel('Time (s)')
+%     ylabel('NIS statistic')
+% end
