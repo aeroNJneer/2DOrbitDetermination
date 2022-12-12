@@ -8,7 +8,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
 
     % Monte Carlo simulation for measurements
-    [xnoisy, measY] = simulateTruthModel(t, X0, Qkf, givenData.Rtrue, stationNums);
+    [xnoisy, measY] = simulateTruthModel(t, nomX0, givenData.Qtrue, givenData.Rtrue, stationNums);
     if (~sim)
        % Parse data from file
         measY = parseGivenData(givenData.tvec, givenData.ydata);
@@ -23,16 +23,16 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     trialMeasInnovationsCov = {};
     trialNEES = {};
     trialNIS = {};
-    scale=.5;
+    scale=1;
     for j = 2:length(t)
-        % Update step
-        if(j>3000)
-            scale = 0.1;
-        elseif (j>5000)
-            scale = 0.01;
-        elseif (j>8000)
-            scale = .001
-        end
+%         % Update step
+%         if(j>3000)
+%             scale = 0.1;
+%         elseif (j>5000)
+%             scale = 0.01;
+%         elseif (j>8000)
+%             scale = .001
+%         end
            
         Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
         pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde'*scale;

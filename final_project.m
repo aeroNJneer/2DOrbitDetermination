@@ -268,8 +268,7 @@ generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", 
 
 %% EKF Implementation
 % Tuning inputs
-rng(100);
-close all
+
 numTrials = 5;
 sim = true;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
