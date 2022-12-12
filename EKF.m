@@ -8,7 +8,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     X0 = nomX0 + Sv * randn(size(Sv, 1), 1);
 
     % Monte Carlo simulation for measurements
-    [xnoisy, measY] = simulateTruthModel(t, nomX0, givenData.Qtrue, givenData.Rtrue, stationNums);
+    [xnoisy, measY] = simulateTruthModel(t, X0, givenData.Qtrue, R, stationNums);
     if (~sim)
        % Parse data from file
         measY = parseGivenData(givenData.tvec, givenData.ydata);
@@ -52,8 +52,8 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
                 % Compute a measurement for station j at time t(i)
                 yhat = [yhat; getNLMeasurement(t(j), xhatMinus, stationIDs(k))];
                 HtildeStacked = [HtildeStacked; getHtilde(xhatMinus, getStationState(t(j), stationIDs(k)))];
-                RSize = size(givenData.Rtrue, 1);   % R is square
-                RStacked = [RStacked [zeros((k-1)*RSize, RSize); givenData.Rtrue; zeros((length(stationIDs)-k)*RSize, RSize)]];
+                RSize = size(R, 1);   % R is square
+                RStacked = [RStacked [zeros((k-1)*RSize, RSize); R; zeros((length(stationIDs)-k)*RSize, RSize)]];
             end
 
             % Compute Kalman gain
