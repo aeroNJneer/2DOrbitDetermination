@@ -113,7 +113,7 @@ generatePlots("msmt", t, "Approximate Linearized Model Data Simulation", trackin
 rng(100);
 numTrials = 10;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
-Qkf = eye(2)*1e-2;
+Qkf = eye(2)*5e-2;
 pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
 
 % Setup
@@ -237,8 +237,8 @@ generatePlots("states", t(2:end), "Filtered States vs. Time, Typical LKF Run", c
 generatePlots("msmt", t, "Noisy Simulated Measurements, Typical LKF Run", simulatedMeasurements(1, :));
 generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)))
 % plot NEES/NIS
-ymax = 10;
-plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t)*dt, ymax, ymax)
+ymax = 40;
+plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t), ymax, ymax)
 
 %% EKF Implementation
 % Tuning inputs
@@ -307,7 +307,7 @@ plotNeesNis(t,NEES,NIS, alpha, numTrials, 'NEES and NIS plots for EKF' , length(
 % Tuning inputs
 numTrials = 1;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
-Qkf = eye(2)*1e-2;
+Qkf = eye(2)*5e-2;
 pPlus0 = diag([.1 .001 .1 .001]);    % Selected such that the satellite doesn't crash into Earth
 alpha = 0.05;
 % Setup
@@ -438,7 +438,3 @@ generatePlots("states", t(2:end), "Filtered Perturbations vs. Time, ydata LKF Ru
     ylabel('Ydot 2\sigma Bound [km/s]');
     xlabel('Time t (s)');
     hold off;
-
-    generatePlots("2sigma", t, lkfEstimationErrsCov)
-plotNeesNis(t,NEES, NIS, alpha, numTrials, 'NEES and NIS plots for ydata LKF run', length(t)*dt, ymax)
-
