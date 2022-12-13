@@ -6,10 +6,8 @@ function generatePlots(type, t, title, data, varargin)
     elseif (type == "errors")
         data1 = varargin{1,:};
         plotEstimationErrors(t, title, data, data1 )
-%     elseif(type=="NeesNis")
-%         plotN(t, title, data, varargin)
-%     elseif(type == "innov")
-%         plotInnovations(t, data, title)
+    elseif (type == "2sigma)")
+        plot2Sigmat(t, title, data)
     end
 end
 
@@ -34,29 +32,7 @@ function plotStates(t, x, title)
         xlabel('Time t (s)');
     grid on;
 end
-
-% function plotInnovations(t, y, title)
-%     data = cell2mat(y{});
-% 
-%     figure
-%     for j = 1:5
-%         subplot(3,1,j)
-%         hold on
-%         plot(t, data(j,:))
-%     end
-%     
-%     % Add labels
-%     sgtitle(title);
-%     subplot(3,1,1);
-%         ylabel('\rho Range (km)');
-%     subplot(3,1,2);
-%         ylabel('\rhodot Range Rate (km/s)');
-%     subplot(3,1,3);
-%         ylabel('\phi Elevation (rad)');
-%         xlabel('Time t (s)');
-%     hold off;
-% 
-% end 
+ 
 function plotMeasurements(t, trackingData, title)
 % Plot measurements
     figure;
@@ -160,29 +136,47 @@ function plotEstimationErrors(t, title, estErr, estErrCov)
 
 end
 
-% function plotN(t, title, NEES, varargin)
-% arguments
-%     t;
-%     title;
-%     NEES ;
-%     varargin{1}=NIS;
-%     varargin{2}=alpha;
-%     varargin{3}=numTrials;
-% 
-% end
-%     NEES_bar = mean(cell2mat(NEES),1);
-%     NIS_bar = mean(cell2mat(opts.NIS),1);
-%     r1 = chi2inv(opts.alpha/2,4*numTrials)/numTrials;
-%     r2 = chi2inv(1-opts.alpha/2,4*numTrials)/numTrials;
-%     
-%     figure
-%     subplot(2,1,1)
-%     scatter(t(2:end),NEES_bar)
-%     xlabel('Time (s)')
-%     ylabel('NEES statistic')
-%     
-%     subplot(2,1,2)
-%     scatter(t(2:end),NIS_bar)
-%     xlabel('Time (s)')
-%     ylabel('NIS statistic')
-% end
+
+function plot2sigma(t, title, estErrCov)
+    figure;
+    threeSigma1 = [];
+    for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
+        threeSigma1 = [threeSigma1 2*sqrt(estErrCov(1,i*size(estErrCov, 1)-3))];
+    end
+    subplot(4,1,1);
+    plot(t(2:end), threeSigma1);
+    sgtitle(title);
+    ylabel('X Est. Error [km]');
+    legend('Est. Error', '+/- 2\sigma bounds')
+    ylim([0 0.5])
+
+    threeSigma2 = [];
+    for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
+        threeSigma2 = [threeSigma2 2*sqrt(estErrCov(2,i*size(estErrCov, 1)-2))];
+    end
+    subplot(4,1,2);
+    hold on;
+    plot(t(2:end), threeSigma2);
+    ylabel('Xdot Est. Error [km/s]');
+    ylim([0 1e-3])
+    threeSigma3 = [];
+    for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
+        threeSigma3 = [threeSigma3 2*sqrt(estErrCov(3,i*size(estErrCov, 1)-1))];
+    end
+    subplot(4,1,3);
+    plot(t(2:end), threeSigma3);
+    ylabel('Y Est. Error [km]');
+    ylim([0 0.2])
+
+    threeSigma4 = [];
+    for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
+        threeSigma4 = [threeSigma4 2*sqrt(estErrCov(4,i*size(estErrCov, 1)))];
+    end
+    subplot(4,1,4);
+    plot(t(2:end), threeSigma4);
+    ylabel('Ydot Est. Error [km/s]');
+    xlabel('Time t (s)');
+    ylim([0 1e-3])
+
+end
+
