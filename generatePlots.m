@@ -6,7 +6,7 @@ function generatePlots(type, t, title, data, varargin)
     elseif (type == "errors")
         data1 = varargin{1,:};
         plotEstimationErrors(t, title, data, data1 )
-    elseif (type == "2sigma)")
+    elseif (type == "2sigma")
         plot2Sigmat(t, title, data)
     end
 end
