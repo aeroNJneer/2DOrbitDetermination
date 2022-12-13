@@ -1,8 +1,8 @@
 close all
 clear
-rng(100);
+% rng(100);
 % constants
-ymax = 100;     % y-limit for NEES/NIS plots
+ymax = 10;     % y-limit for NEES/NIS plots
 mu = 398600; % gravitational constant
 omegaE = 2*pi/86400;  % angular velocity of earth
 rE = 6378; % radius of earth
@@ -110,7 +110,7 @@ generatePlots("msmt", t, "Approximate Linearized Model Data Simulation", trackin
 
 %% LKF Implementation
 % Tuning inputs
-
+rng(100);
 numTrials = 10;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-2;
@@ -237,12 +237,14 @@ generatePlots("states", t(2:end), "Filtered States vs. Time, Typical LKF Run", c
 generatePlots("msmt", t, "Noisy Simulated Measurements, Typical LKF Run", simulatedMeasurements(1, :));
 generatePlots("errors", t, "State Estimation Errors vs. Time, Typical LKF Run", cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)))
 % plot NEES/NIS
-plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t), ymax)
+ymax = 10;
+plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t)*dt, ymax, ymax)
 
 %% EKF Implementation
 % Tuning inputs
-numTrials = 10;
-sim = true;
+rng(100);
+numTrials = 1;
+sim = false;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-10;
 R = givenData.Rtrue;
@@ -257,7 +259,6 @@ mu = 398600;
 nomX0 = [r0; 0; 0; sqrt(mu/r0)];    % initial conditions w/no noise
 gamma = [0 0; 1 0; 0 0; 0 1]; 
 omegaTilde = dt * gamma; 
-% 
 
 % Initialize outputs. Each row is a different trial
 filteredPerturbations = {};
@@ -288,18 +289,19 @@ for i = 1:numTrials
     NIS = [NIS; trialNIS];
 end
 
-
 if(sim)
     run = "Monte Carlo";
 else
     run = "ydata";
 end
+ymax = 10;
 % Plot typical simulation from first sim run
 generatePlots("states", t(2:end), strcat("Filtered States vs. Time, ", run, " EKF Run"), cell2mat(trialTotalStates(1, :)));
 generatePlots("errors", t, strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)));
 generatePlots("innov", t, strcat("Measurement Innovations, ", run, " EKF Run"), measInnovations);
+generatePlots("2sigma", t,strcat("2 sigma Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrsCov(1,:)) )
 % plot NEES/NIS
-plotNeesNis(t,NEES,NIS, alpha, numTrials, 'NEES and NIS plots for EKF' , length(t), ymax)
+plotNeesNis(t,NEES,NIS, alpha, numTrials, 'NEES and NIS plots for EKF' , length(t)*dt, ymax, ymax)
 
 %% Unknown Data LKF Run
 % Tuning inputs
@@ -389,15 +391,6 @@ for j = 2:length(t)
     NIS = [NIS dy'*(S)^(-1)*dy];
 end
 
-% NEES_bar = mean(NEES,1);
-% NIS_bar = mean(NIS,1);
-% alpha = .05;
-% r1nees = chi2inv(alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-% r2nees = chi2inv(1-alpha/2,4*numTrials)/numTrials * ones(size(t(2:end)));
-% r1nis = chi2inv(alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-% r2nis = chi2inv(1-alpha/2,3*numTrials)/numTrials * ones(size(t(2:end)));
-% 
-
 % Plot typical simulation from first sim run
 generatePlots("states", t(2:end), "Filtered Total States vs. Time, ydata LKF Run", lkfTotalStates);
 generatePlots("states", t(2:end), "Filtered Perturbations vs. Time, ydata LKF Run", lkfPerturbations);
@@ -446,5 +439,6 @@ generatePlots("states", t(2:end), "Filtered Perturbations vs. Time, ydata LKF Ru
     xlabel('Time t (s)');
     hold off;
 
-plotNeesNis(t,NEES, NIS, alpha, numTrials, 'NEES and NIS plots for ydata LKF run', length(t), ymax)
+    generatePlots("2sigma", t, lkfEstimationErrsCov)
+plotNeesNis(t,NEES, NIS, alpha, numTrials, 'NEES and NIS plots for ydata LKF run', length(t)*dt, ymax)
 
