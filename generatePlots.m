@@ -7,7 +7,7 @@ function generatePlots(type, t, title, data, varargin)
         data1 = varargin{1,:};
         plotEstimationErrors(t, title, data, data1 )
     elseif (type == "2sigma")
-        plot2Sigmat(t, title, data)
+        plot2Sigma(t, title, data)
     end
 end
 
@@ -137,7 +137,7 @@ function plotEstimationErrors(t, title, estErr, estErrCov)
 end
 
 
-function plot2sigma(t, title, estErrCov)
+function plot2Sigma(t, title, estErrCov)
     figure;
     threeSigma1 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
@@ -147,7 +147,6 @@ function plot2sigma(t, title, estErrCov)
     plot(t(2:end), threeSigma1);
     sgtitle(title);
     ylabel('X Est. Error [km]');
-    legend('Est. Error', '+/- 2\sigma bounds')
     ylim([0 0.5])
 
     threeSigma2 = [];
@@ -158,7 +157,8 @@ function plot2sigma(t, title, estErrCov)
     hold on;
     plot(t(2:end), threeSigma2);
     ylabel('Xdot Est. Error [km/s]');
-    ylim([0 1e-3])
+    ylim([0.0005 0.002])
+
     threeSigma3 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
         threeSigma3 = [threeSigma3 2*sqrt(estErrCov(3,i*size(estErrCov, 1)-1))];
@@ -166,7 +166,7 @@ function plot2sigma(t, title, estErrCov)
     subplot(4,1,3);
     plot(t(2:end), threeSigma3);
     ylabel('Y Est. Error [km]');
-    ylim([0 0.2])
+    ylim([0 0.5])
 
     threeSigma4 = [];
     for i = 1:size(estErrCov, 2)/size(estErrCov, 1)
@@ -176,7 +176,7 @@ function plot2sigma(t, title, estErrCov)
     plot(t(2:end), threeSigma4);
     ylabel('Ydot Est. Error [km/s]');
     xlabel('Time t (s)');
-    ylim([0 1e-3])
+    ylim([0.0005 0.002])
 
 end
 
