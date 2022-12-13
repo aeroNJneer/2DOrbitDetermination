@@ -1,8 +1,9 @@
 close all
 clear
-% rng(100);
+rng(100);
 % constants
 ymax = 10;     % y-limit for NEES/NIS plots
+alpha = 0.05;  % 95% confidence
 mu = 398600; % gravitational constant
 omegaE = 2*pi/86400;  % angular velocity of earth
 rE = 6378; % radius of earth
@@ -138,7 +139,6 @@ measInnovations = {};
 measInnovationsCov = {};
 NEES = {};
 NIS = {};
-
 for i = 1:numTrials
     disp(['Running LKF trial ' int2str(i) '...']);
     % Initialize priors
@@ -244,7 +244,7 @@ plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t),
 % Tuning inputs
 rng(100);
 numTrials = 1;
-sim = false;
+sim = true;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-10;
 R = givenData.Rtrue;
