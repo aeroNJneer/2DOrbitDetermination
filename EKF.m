@@ -24,16 +24,7 @@ EKF (t, nomX0, pPlus0, Qkf, R, omegaTilde, givenData, dt, stationNums, sim)
     trialNEES = {};
     trialNIS = {};
     scale=1;
-    for j = 2:length(t)
-%         % Update step
-%         if(j>3000)
-%             scale = 0.1;
-%         elseif (j>5000)
-%             scale = 0.01;
-%         elseif (j>8000)
-%             scale = .001
-%         end
-           
+    for j = 2:length(t)           
         Ftilde = eye(4) + getAtilde(xhatPlus)*dt;
         pMinus = Ftilde*pPlus*Ftilde' + omegaTilde*Qkf*omegaTilde'*scale;
         [xhatMinus, ~] = simulateTruthModel([t(j-1) t(j)], xhatPlus, zeros(2), zeros(3), stationNums);

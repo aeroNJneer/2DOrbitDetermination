@@ -1,6 +1,5 @@
 close all
 clear
-rng(100);
 % constants
 ymax = 10;     % y-limit for NEES/NIS plots
 alpha = 0.05;  % 95% confidence
@@ -244,7 +243,7 @@ plotNeesNis(t, NEES, NIS, alpha, numTrials, 'NEES/NIS plots for LKF', length(t),
 % Tuning inputs
 rng(100);
 numTrials = 1;
-sim = true;
+sim = false;
 givenData = load('orbitdeterm_finalproj_KFdata.mat');
 Qkf = eye(2)*1e-10;
 R = givenData.Rtrue;
@@ -297,12 +296,13 @@ end
 ymax = 10;
 % Plot typical simulation from first sim run
 generatePlots("states", t(2:end), strcat("Filtered States vs. Time, ", run, " EKF Run"), cell2mat(trialTotalStates(1, :)));
-generatePlots("errors", t, strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)));
-generatePlots("innov", t, strcat("Measurement Innovations, ", run, " EKF Run"), measInnovations);
 generatePlots("2sigma", t,strcat("2 sigma Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrsCov(1,:)) )
-% plot NEES/NIS
-plotNeesNis(t,NEES,NIS, alpha, numTrials, 'NEES and NIS plots for EKF' , length(t)*dt, ymax, ymax)
-
+if(sim)
+    generatePlots("errors", t, strcat("State Estimation Errors vs. Time, ", run, " EKF Run" ), cell2mat(estimationErrs(1, :)), cell2mat(estimationErrsCov(1,:)));
+    generatePlots("innov", t, strcat("Measurement Innovations, ", run, " EKF Run"), measInnovations);
+    % plot NEES/NIS
+    plotNeesNis(t,NEES,NIS, alpha, numTrials, 'NEES and NIS plots for EKF' , length(t)*dt, ymax, ymax)
+end 
 %% Unknown Data LKF Run
 % Tuning inputs
 numTrials = 1;
